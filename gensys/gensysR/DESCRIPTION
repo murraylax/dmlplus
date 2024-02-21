@@ -1,0 +1,14 @@
+Package: gensysR
+Type: Package
+Title: Use Sims (2002) method for solving a linear dynamic general equilibrium model
+Version: 0.1.0
+Author: James Murray
+Maintainer: James Murray <james@murraylax.org>
+Description: Use Sims (2002) method for solving a linear dynamic general equilibrium model
+License: GPL v3.0
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.2.3
+LinkingTo: Rcpp, RcppEigen
+Imports: 
+  Rcpp
