@@ -34,9 +34,15 @@
 #define _INCL_UTILS
 
 #include <complex>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_vector.h>
 #include <lapacke.h>
 #include <Eigen/Dense>
 
+void copy_vector_to_gsl(gsl_vector* gsl_output, const Eigen::VectorXd& eigen_input);
+void copy_gsl_to_vector(Eigen::VectorXd& eigen_output, const gsl_vector* gsl_input);
+void copy_matrix_to_gsl(gsl_matrix* gsl_output, const Eigen::MatrixXd& eigen_input);
+void copy_gsl_to_matrix(Eigen::MatrixXd& eigen_output, const gsl_matrix* gsl_input);
 
 void copy_matrix_to_lapack_complex(lapack_complex_double* lapackMatrix, const Eigen::MatrixXd& matrix);
 void copy_lapack_complex_to_matrix(Eigen::MatrixXcd& complex_matrix, const lapack_complex_double* lapack_complex);

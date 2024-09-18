@@ -1,5 +1,7 @@
 CPP = g++
-INCLUDES = -I/usr/include/eigen3 -I/usr/include/gsl
+DMLPLUS_LOCATION = /home/murraylax/gitrepo/code/cpp/dmlplus
+DMLPLUS_INCLUDES = -I$(DMLPLUS_LOCATION)/gensys -I$(DMLPLUS_LOCATION)/numeric
+INCLUDES = -I/usr/include/eigen3 -I/usr/include/gsl $(DMLPLUS_INCLUDES)
 LINKS = -llapacke -llapack -lcblas -lblas -lgsl -lgslcblas -lm
 OPTIONS = -std=c++23
 

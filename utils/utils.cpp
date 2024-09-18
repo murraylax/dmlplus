@@ -38,6 +38,98 @@ using namespace std;
 using namespace Eigen;
 
 /**
+ * copy_vector_to_gsl(const Eigen::VectorXd& eigen_input, gsl_vector* gsl_output)
+ * 
+ * Copy the elements of an Eigen::VectorXd to a gsl_vector* 
+ * 
+ * @param gsl_output (Output) The elements of this gsl_vector* will be overwritten with elements of the `eigen_input` parameter
+ * @param eigen_input This is a const Eigen::VectorXd whose elements will be copied to the `gsl_output` parameter
+*/
+void copy_vector_to_gsl(gsl_vector* gsl_output, const Eigen::VectorXd& eigen_input) {
+    int eigen_size = eigen_input.size();
+    int gsl_size = gsl_output->size;
+    if(eigen_size != gsl_size) {
+        throw std::invalid_argument("Size mismatch: Eigen::VectorXd and gsl_vector must have the same size.");
+    }
+
+    for(int i=0; i<eigen_input.size(); i++) {
+        gsl_vector_set(gsl_output, i, eigen_input[i]);
+    }
+    return;
+}
+
+/**
+ * copy_gsl_to_vector(Eigen::VectorXd& eigen_output, const gsl_vector* gsl_input)
+ * 
+ * Copy the elements of a gsl_vector* to an Eigen::VectorXd  
+ * 
+ * @param eigen_output (Output) The elements of this Eigen::VectorXd* vector will be overwritten with elements of the `gsl_input` parameter
+ * @param gsl_input This is a const gsl_vector* whose elements will be copied to the `eigen_output` parameter
+*/
+void copy_gsl_to_vector(Eigen::VectorXd& eigen_output, const gsl_vector* gsl_input) {
+    int eigen_size = eigen_output.size();
+    int gsl_size = gsl_input->size;
+    if(eigen_size != gsl_size) {
+        throw std::invalid_argument("Size mismatch: Eigen::VectorXd and gsl_vector must have the same size.");
+    }
+
+    for(int i=0; i<eigen_output.size(); i++) {
+        eigen_output[i] = gsl_vector_get(gsl_input, i);
+    }
+    return;
+}
+
+/**
+ * copy_matrix_to_gsl(const Eigen::MatrixXd& eigen_input, gsl_matrix* gsl_output)
+ * 
+ * Copy the elements of an Eigen::MatrixXd to a gsl_matrix* 
+ * 
+ * @param gsl_output (Output) The elements of this gsl_matrix* will be overwritten with elements of the `eigen_input` parameter
+ * @param eigen_input This is a const Eigen::MatrixXd whose elements will be copied to the `gsl_output` parameter
+*/
+void copy_matrix_to_gsl(gsl_matrix* gsl_output, const Eigen::MatrixXd& eigen_input) {
+    int eigen_nrow = eigen_input.rows();
+    int eigen_ncol = eigen_input.cols();
+    int gsl_nrow = gsl_output->size1;
+    int gsl_ncol = gsl_output->size2;
+    if(eigen_nrow != gsl_nrow || egein_ncol != gsl_ncol) {
+        throw std::invalid_argument("Size mismatch: Eigen::MatrixXd and gsl_matrix* must have the same dimensions.");
+    }
+
+    for(int i = 0; i < eigen_nrow; i++) {
+        for(int j = 0; j < eigen_ncol; j++) {
+            gsl_matrix_set(gsl_output, i, j, eigen_input[i,j]);
+        }
+    }
+    return;
+}
+
+/**
+ * copy_matrix_to_gsl(const Eigen::MatrixXd& eigen_input, gsl_matrix* gsl_output)
+ * 
+ * Copy the elements of an Eigen::MatrixXd to a gsl_matrix* 
+ * 
+ * @param eigen_output (Output) This is a Eigen::MatrixXd whose elements will be overwritten with elements of the `gsl_intput` parameter
+ * @param gsl_input This is a const gsl_matrix* whose elements will be copied to the `eigen_output` parameter
+*/
+void copy_gsl_to_matrix(Eigen::MatrixXd& eigen_output, const gsl_matrix* gsl_input) {
+    int eigen_nrow = eigen_output.rows();
+    int eigen_ncol = eigen_output.cols();
+    int gsl_nrow = gsl_input->size1;
+    int gsl_ncol = gsl_input->size2;
+    if(eigen_nrow != gsl_nrow || egein_ncol != gsl_ncol) {
+        throw std::invalid_argument("Size mismatch: Eigen::MatrixXd and gsl_matrix* must have the same dimensions.");
+    }
+
+    for(int i = 0; i < eigen_nrow; i++) {
+        for(int j = 0; j < eigen_ncol; j++) {
+            eigen_output[i,j] = gsl_matrix_get(gsl_input, i, j);
+        }
+    }
+    return;
+}
+
+/**
  * copy_matrix_to_lapack_complex(lapack_complex_double* lapackMatrix, const Eigen::MatrixXd& matrix)
  * 
  * Copy the elements of an Eigen::MatrixXd to a lapack_complex_double* 

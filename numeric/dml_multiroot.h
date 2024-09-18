@@ -44,12 +44,6 @@ struct FunctionData {
     const void* params; 
 };
 
-// Copy an Eigen::VectorXd to a gsl_vector*
-void eigenToGsl(const Eigen::VectorXd& eigen_input, gsl_vector* gsl_output);
-
-// Copy a gsl_vector* to an Eigen::VectorXd
-void gslToEigen(const gsl_vector* gsl_input, Eigen::VectorXd& eigen_output);
-
 // GSL wrapper for the user-defined function to minimize
 int multiroot_gsl_f(const gsl_vector* gsl_x, void* data, gsl_vector* gsl_f);
 // GSL wrapper for the Jacobian of the function. It does not currently do anything

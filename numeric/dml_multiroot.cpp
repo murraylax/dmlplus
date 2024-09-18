@@ -29,46 +29,20 @@
 */
 
 #include <iostream>
+#include <utils.h>
 #include "dml_multiroot.h"
 
 using namespace std;
 
-void eigenToGsl(const Eigen::VectorXd& eigen_input, gsl_vector* gsl_output) {
-    int eigen_size = eigen_input.size();
-    int gsl_size = gsl_output->size;
-    if(eigen_size != gsl_size) {
-        throw std::invalid_argument("Size mismatch: Eigen::VectorXd and gsl_vector must have the same size.");
-    }
-
-    for(int i=0; i<eigen_input.size(); i++) {
-        gsl_vector_set(gsl_output, i, eigen_input[i]);
-    }
-    return;
-}
-
-void gslToEigen(const gsl_vector* gsl_input, Eigen::VectorXd& eigen_output) {
-    int eigen_size = eigen_output.size();
-    int gsl_size = gsl_input->size;
-    if(eigen_size != gsl_size) {
-        throw std::invalid_argument("Size mismatch: Eigen::VectorXd and gsl_vector must have the same size.");
-    }
-
-    for(int i=0; i<eigen_output.size(); i++) {
-        eigen_output[i] = gsl_vector_get(gsl_input, i);
-    }
-    return;
-}
-
-// 
 int multiroot_gsl_f(const gsl_vector* gsl_x, void* data, gsl_vector* gsl_f) {
     FunctionData* funcData = static_cast<FunctionData*>(data);
     Eigen::VectorXd x(gsl_x->size);
-    gslToEigen(gsl_x, x);
+    copy_gsl_to_vector(x, gsl_x);
 
     // Call the user's function 
     Eigen::VectorXd result = funcData->func(x, funcData->params);
     // Copy the output to a gsl_vector for the output
-    eigenToGsl(result, gsl_f);
+    copy_vector_to_gsl(gsl_f, result);
 
     return GSL_SUCCESS;
 }
@@ -110,7 +84,7 @@ Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess,
 
     // Initial Guess
     gsl_vector* gsl_x = gsl_vector_alloc(dimension);
-    eigenToGsl(initial_guess, gsl_x);
+    copy_vector_to_gsl(gsl_x, initial_guess);
 
     // Set up solver
     gsl_multiroot_fsolver_set(solver, &system, gsl_x);
@@ -135,7 +109,7 @@ Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess,
     }
     
     // Convert back to Eigen::VectorXd
-    gslToEigen(solver->x, result);
+    copy_gsl_to_vector(result, solver->x);
 
     // Clean up
     gsl_multiroot_fsolver_free(solver);
