@@ -92,13 +92,13 @@ void copy_matrix_to_gsl(gsl_matrix* gsl_output, const Eigen::MatrixXd& eigen_inp
     int eigen_ncol = eigen_input.cols();
     int gsl_nrow = gsl_output->size1;
     int gsl_ncol = gsl_output->size2;
-    if(eigen_nrow != gsl_nrow || egein_ncol != gsl_ncol) {
+    if(eigen_nrow != gsl_nrow || eigen_ncol != gsl_ncol) {
         throw std::invalid_argument("Size mismatch: Eigen::MatrixXd and gsl_matrix* must have the same dimensions.");
     }
 
     for(int i = 0; i < eigen_nrow; i++) {
         for(int j = 0; j < eigen_ncol; j++) {
-            gsl_matrix_set(gsl_output, i, j, eigen_input[i,j]);
+            gsl_matrix_set(gsl_output, i, j, eigen_input(i,j));
         }
     }
     return;
@@ -117,13 +117,13 @@ void copy_gsl_to_matrix(Eigen::MatrixXd& eigen_output, const gsl_matrix* gsl_inp
     int eigen_ncol = eigen_output.cols();
     int gsl_nrow = gsl_input->size1;
     int gsl_ncol = gsl_input->size2;
-    if(eigen_nrow != gsl_nrow || egein_ncol != gsl_ncol) {
+    if(eigen_nrow != gsl_nrow || eigen_ncol != gsl_ncol) {
         throw std::invalid_argument("Size mismatch: Eigen::MatrixXd and gsl_matrix* must have the same dimensions.");
     }
 
     for(int i = 0; i < eigen_nrow; i++) {
         for(int j = 0; j < eigen_ncol; j++) {
-            eigen_output[i,j] = gsl_matrix_get(gsl_input, i, j);
+            eigen_output(i,j) = gsl_matrix_get(gsl_input, i, j);
         }
     }
     return;
