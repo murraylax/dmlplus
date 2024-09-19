@@ -37,11 +37,13 @@ dml: $(DMLDEPENDS)
 	ar rcs libdml.a $(DMLOBJECTS)
 
 clean:
+	rm -f *.o *.out *.a
 	rm -f utils/*.o utils/*.out utils/*.a
 	rm -f numeric/*.o numeric/*.out numeric/*.a
 	rm -f gensys/*.o gensys/*.out gensys/*.a
 
 all:
+	rm -f *.o *.out *.a
 	rm -f utils/*.o utils/*.out utils/*.a
 	rm -f numeric/*.o numeric/*.out numeric/*.a
 	rm -f gensys/*.o gensys/*.out gensys/*.a

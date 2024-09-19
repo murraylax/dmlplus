@@ -56,4 +56,20 @@ Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess,
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
                               const void* params);
 
+Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
+                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+                              const void* params, bool verbose);
+
+Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
+                              const Eigen::VectorXd& lower_bounds,
+                              const Eigen::VectorXd& upper_bounds,
+                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+                              const void* params, bool verbose);
+
+Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
+                              const Eigen::VectorXd& lower_bounds,
+                              const Eigen::VectorXd& upper_bounds,
+                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+                              const void* params);
+
 #endif

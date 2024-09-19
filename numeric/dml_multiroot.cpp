@@ -64,6 +64,51 @@ int multiroot_gsl_fdf(const gsl_vector* x, void* data, gsl_vector* f, gsl_matrix
 Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
                               const void* params) {
+    return dml_multiroot(initial_guess, func, params, false);
+}
+
+Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
+                              const Eigen::VectorXd& lower_bounds,
+                              const Eigen::VectorXd& upper_bounds,
+                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+                              const void* params, bool verbose) {
+    int n = initial_guess.size();
+    Eigen::VectorXd penalty(n);
+    penalty.setConstant(0.0);
+    Eigen::VectorXd corrected_guess = initial_guess;
+
+    for(int i = 0; i < n; i++) {
+        if(initial_guess(i) > upper_bounds(i)) {
+            penalty(i) = 100.0 * pow(initial_guess(i) - upper_bounds(i), 2.0);
+            corrected_guess(i) = upper_bounds(i);
+        } 
+        if(initial_guess(i) < lower_bounds(i)) {
+            penalty(i) = 100.0 * pow(initial_guess(i) - lower_bounds(i), 2.0);
+            corrected_guess(i) = lower_bounds(i);
+        }     
+    }
+
+    Eigen::VectorXd sol = dml_multiroot(corrected_guess, func, params, verbose);
+
+    for(int i = 0; i < n; i++) {
+        if(penalty(i) > 0) {
+            sol(i) = sol(i)*sol(i) + penalty(i);
+        }
+    }
+    return sol;
+}
+
+Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
+                              const Eigen::VectorXd& lower_bounds,
+                              const Eigen::VectorXd& upper_bounds,
+                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+                              const void* params) {
+    return dml_multiroot(initial_guess, lower_bounds, upper_bounds, func, params, false);
+}
+
+Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
+                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+                              const void* params, bool verbose) {
 
     int max_iterations = 100000; // Maximum number of iterations
     double ftol = 1e-8; // 
@@ -95,10 +140,14 @@ Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess,
     int iter = 0;
     while(status==GSL_CONTINUE && iter < max_iterations) {
         iter++;
-
+        
+        if(verbose) {
+            copy_gsl_to_vector(result, solver->x);
+            cout << "Iteration: " << iter << "\nCurent value: " << result.transpose() << endl;
+        }
         status = gsl_multiroot_fsolver_iterate(solver);
         if(status) {
-            throw std::runtime_error("Howdy! Solver failed: " + std::string(gsl_strerror(status)));
+            throw std::runtime_error("Solver failed: " + std::string(gsl_strerror(status)));
         }
 
         status = gsl_multiroot_test_residual(solver->f, ftol);

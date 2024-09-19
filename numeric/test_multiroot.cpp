@@ -54,7 +54,7 @@ int main() {
     Eigen::VectorXd x(2);
     x << 2, 2;
 
-    Eigen::VectorXd sol = dml_multiroot(x, myfunc, static_cast<void*>(&params));
+    Eigen::VectorXd sol = dml_multiroot(x, myfunc, static_cast<void*>(&params), true);
     cout << "Solution:\n" << sol << endl;
 
     return 0;
