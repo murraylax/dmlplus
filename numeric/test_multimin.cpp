@@ -18,11 +18,10 @@
 */
 
 /**
- * @file multiroot.cpp
+ * @file test_multimin.cpp
  *
  * @brief 
- * This is a numeric multivariate root finder using vectors/matrices defined by the Eigen package. 
- * It is a wrapper for the C gsl_multiroot functions from the GNU Scientific Library (https://www.gnu.org/software/gsl/doc/html/multiroots.html)
+ * Test out the numeric multidimensional minimizer dml_multimin
  * 
  * @author James Murray
  * Contact: jmurray@uwlax.edu
@@ -30,11 +29,11 @@
 
 #include <Eigen/Dense>
 #include <iostream>
-#include "dml_multiroot.h"
+#include "dml_multimin.h"
 
 using namespace std;
 
-Eigen::VectorXd myfunc(Eigen::VectorXd x, const void* params) {
+double myfunc(Eigen::VectorXd x, const void* params) {
     const Eigen::VectorXd* p = static_cast<const Eigen::VectorXd*>(params);
 
     Eigen::VectorXd result(x.size());
@@ -44,8 +43,9 @@ Eigen::VectorXd myfunc(Eigen::VectorXd x, const void* params) {
     eq++;
     result(eq) = (*p)[1] * (x[1] - x[0] * x[0]);
 
+    double fmin = result.squaredNorm();
 
-    return result;
+    return fmin;
 }
 
 int main() {
@@ -60,7 +60,7 @@ int main() {
     upper_bounds << 2.5, 2.5;
 
 
-    Eigen::VectorXd sol = dml_multiroot(x, lower_bounds, upper_bounds, myfunc, static_cast<void*>(&params), true);
+    Eigen::VectorXd sol = dml_multimin(x, lower_bounds, upper_bounds, myfunc, static_cast<void*>(&params), true);
     cout << "Solution:\n" << sol << endl;
 
     return 0;

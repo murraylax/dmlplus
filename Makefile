@@ -5,8 +5,8 @@ INCLUDES = $(DMLPLUS_INCLUDES) -I/usr/include/eigen3 -I/usr/include/gsl
 LINKS = -llapacke -llapack -lcblas -lblas -lgsl -lgslcblas -lm
 OPTIONS = -std=c++23
 
-DMLOBJECTS = $(DMLPLUS_LOCATION)/utils/utils.o $(DMLPLUS_LOCATION)/gensys/qz.o $(DMLPLUS_LOCATION)/gensys/gensys.o $(DMLPLUS_LOCATION)/numeric/dml_multiroot.o
-DMLDEPENDS = utils.o qz.o gensys.o dml_multiroot.o
+DMLOBJECTS = $(DMLPLUS_LOCATION)/utils/utils.o $(DMLPLUS_LOCATION)/gensys/qz.o $(DMLPLUS_LOCATION)/gensys/gensys.o $(DMLPLUS_LOCATION)/numeric/dml_multiroot.o $(DMLPLUS_LOCATION)/numeric/dml_multimin.o
+DMLDEPENDS = utils.o qz.o gensys.o dml_multiroot.o dml_multimin.o
 
 utils.o: utils/utils.h utils/utils.cpp
 	$(CPP) $(OPTIONS) $(INCLUDES) -c utils/utils.cpp -o utils/utils.o 
@@ -29,9 +29,17 @@ setup_gensysR: gensys/gensys.h gensys/gensys.cpp gensys/qz.h gensys/qz.cpp gensy
 dml_multiroot.o: numeric/dml_multiroot.h numeric/dml_multiroot.cpp
 	$(CPP) $(OPTIONS) $(INCLUDES) -c numeric/dml_multiroot.cpp -o numeric/dml_multiroot.o
 
+dml_multimin.o: numeric/dml_multimin.h numeric/dml_multimin.cpp
+	$(CPP) $(OPTIONS) $(INCLUDES) -c numeric/dml_multimin.cpp -o numeric/dml_multimin.o
+
 test_multiroot.out: utils.o dml_multiroot.o numeric/test_multiroot.cpp
 	$(CPP) $(OPTIONS) $(INCLUDES) numeric/test_multiroot.cpp numeric/dml_multiroot.o utils/utils.o -o numeric/test_multiroot.out $(LINKS)
 	chmod a+x numeric/test_multiroot.out
+
+test_multimin.out: utils.o dml_multimin.o numeric/test_multimin.cpp
+	$(CPP) $(OPTIONS) $(INCLUDES) numeric/test_multimin.cpp numeric/dml_multimin.o utils/utils.o -o numeric/test_multimin.out $(LINKS)
+	chmod a+x numeric/test_multimin.out
+
 
 dml: $(DMLDEPENDS)
 	ar rcs libdml.a $(DMLOBJECTS)

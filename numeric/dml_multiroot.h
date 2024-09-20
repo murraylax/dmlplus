@@ -36,13 +36,25 @@
 #include <functional>
 
 // The parameter to pass to the GSL wrapped function. It includes both the user-provided function and the user-provided parameters
-struct FunctionData {
+struct multiroot_function_data {
     // func is the function to be solved. This is a function from R^n to R^n for which to find the zeros
     std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void*)> func;
 
     // This a generic object of parameters to pass to func()
     const void* params; 
+
+    // Upper bounds 
+    Eigen::VectorXd upper_bounds;
+    // Lower bounds 
+    Eigen::VectorXd lower_bounds;
+
 };
+
+// A function to set up a RootFunctionData struct 
+multiroot_function_data setup_multiroot_function_data(std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+                                 const void* params,
+                                 Eigen::VectorXd& lower_bounds,
+                                 Eigen::VectorXd& upper_bounds);
 
 // GSL wrapper for the user-defined function to minimize
 int multiroot_gsl_f(const gsl_vector* gsl_x, void* data, gsl_vector* gsl_f);
@@ -51,25 +63,32 @@ int multiroot_gsl_df(const gsl_vector* gsl_x, void* data, gsl_matrix* J);
 // Combined GSL wrapper for the user-defined function and the Jacobian
 int multiroot_gsl_fdf(const gsl_vector* x, void* data, gsl_vector* f, gsl_matrix* J);
 
-// Here's the big function
+// Here are all the versions of the dml_multiroot() function
+
+// Multiroot finder with no lower and upper bounds, and no value for verbose
 Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
                               const void* params);
 
-Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
-                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-                              const void* params, bool verbose);
 
-Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
-                              const Eigen::VectorXd& lower_bounds,
-                              const Eigen::VectorXd& upper_bounds,
-                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-                              const void* params, bool verbose);
-
+// Multiroot finder with upper and lower bounds given, but no value for verbose
 Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
                               const Eigen::VectorXd& lower_bounds,
                               const Eigen::VectorXd& upper_bounds,
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
                               const void* params);
+
+// Multiroot finder with no lower and upper bounds given
+Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
+                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+                              const void* params, bool verbose);
+
+// Multiroot finder with lower and upper bounds
+Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
+                              const Eigen::VectorXd& lower_bounds,
+                              const Eigen::VectorXd& upper_bounds,
+                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+                              const void* params, 
+                              bool verbose);
 
 #endif
