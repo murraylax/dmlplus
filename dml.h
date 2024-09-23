@@ -32,6 +32,7 @@
 
 #include <utils/utils.h>
 #include <numeric/dml_multiroot.h>
+#include <numeric/dml_multimin.h>
 #include <gensys/qz.h>
 #include <gensys/gensys.h>
 

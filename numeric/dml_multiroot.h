@@ -40,6 +40,9 @@ struct multiroot_function_data {
     // func is the function to be solved. This is a function from R^n to R^n for which to find the zeros
     std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void*)> func;
 
+   // jacfunc is the Jacobian of func
+    std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void*)> jacfunc;
+
     // This a generic object of parameters to pass to func()
     const void* params; 
 
@@ -51,10 +54,18 @@ struct multiroot_function_data {
 };
 
 // A function to set up a RootFunctionData struct 
-multiroot_function_data setup_multiroot_function_data(std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-                                 const void* params,
-                                 Eigen::VectorXd& lower_bounds,
-                                 Eigen::VectorXd& upper_bounds);
+multiroot_function_data setup_multiroot_function_data(
+    std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+    std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
+    const void* params,
+    Eigen::VectorXd& lower_bounds,
+    Eigen::VectorXd& upper_bounds);
+
+multiroot_function_data setup_multiroot_function_data(
+    std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+    const void* params,
+    const Eigen::VectorXd& lower_bounds,
+    const Eigen::VectorXd& upper_bounds);
 
 // GSL wrapper for the user-defined function to minimize
 int multiroot_gsl_f(const gsl_vector* gsl_x, void* data, gsl_vector* gsl_f);
@@ -90,5 +101,15 @@ Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess,
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
                               const void* params, 
                               bool verbose);
+
+// Multiroot finder with lower and upper bounds and Jacobian given
+Eigen::VectorXd dml_multiroot(
+        const Eigen::VectorXd& initial_guess, 
+        const Eigen::VectorXd& lower_bounds,
+        const Eigen::VectorXd& upper_bounds,
+        std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+        std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
+        const void* params, 
+        bool verbose);
 
 #endif
