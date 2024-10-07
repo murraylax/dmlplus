@@ -38,6 +38,15 @@
 #include <gsl/gsl_vector.h>
 #include <lapacke.h>
 #include <Eigen/Dense>
+#include <chrono>
+
+// Define a type alias for easier readability
+using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
+
+// Function to start the timer and return the start time point
+TimePoint start_timer();
+// Function to stop the timer, calculate the elapsed time, and print it
+void stop_timer(const TimePoint& start_time);
 
 void copy_vector_to_gsl(gsl_vector* gsl_output, const Eigen::VectorXd& eigen_input);
 void copy_gsl_to_vector(Eigen::VectorXd& eigen_output, const gsl_vector* gsl_input);

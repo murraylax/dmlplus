@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 James M. Murray
+ * Copyright 2024 James M. Murray
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,6 +50,31 @@
 
 #include <gensys.h>
 #include <qz.h>
+#include <fstream>
+#include <iostream>
+
+/**
+ * write_irf(const Eigen::MatrixXd& mdIRF, const std::vector<std::string>& varnames, const std::string& filepath)
+ * 
+ * Write the impulse response functions to a text file to be easily read in R
+ * 
+ * @param mdIRF Matrix of impulse responses, return varlue of gensys_irf()
+ * @param varnames Vector of strings for the variable names
+ * @param filepath The filepath for the output
+ */
+void write_irf(const Eigen::MatrixXd& mdIRF, const std::vector<std::string>& varnames, const std::string& filepath) {
+    std::ofstream irffile(filepath);
+    size_t nvar = mdIRF.cols() - 1;
+    for(size_t v=0; v<nvar; v++) {
+        irffile << varnames[v] << "  ";
+    }
+    irffile << "Time" << std::endl;
+
+    irffile << mdIRF;
+    irffile.close();
+
+    return;
+}
 
 /**
  * Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, double fshock, size_t shock_idx, size_t nirf)
@@ -62,12 +87,12 @@
  * @param shock_idx: Index into z_t for the specific shock
  * @param nirf: Number of periods for the impulse response
  * 
- * @return Matrix size (nirf x nvar) for the impulse responses, where each row t is the response of x_t 
+ * @return Matrix size (nirf x (nvar+1)) for the impulse responses, where each row t is the response of x_t. The last column is the time period
  */
 Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, double fshock, size_t shock_idx, size_t nirf) {
     size_t nvar = mdG.rows();
     size_t nshocks = mdM.cols();
-    Eigen::MatrixXd mdIRF(nirf, nvar);
+    Eigen::MatrixXd mdIRF(nirf, nvar+1);
     Eigen::VectorXd vdIRF0(nvar);
     Eigen::VectorXd vdIRF1(nvar);
     Eigen::VectorXd vdZ(nshocks);
@@ -77,12 +102,14 @@ Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& md
 
     // Time t=0
     vdIRF0 = mdM * vdZ;
-    mdIRF.row(0) = vdIRF0;
+    mdIRF.row(0).segment(0, nvar) = vdIRF0.transpose();
+    mdIRF(0,nvar) = 0;
     
     // All other t
     for(int t=1; t<nirf; t++) {
         vdIRF1 = mdG * vdIRF0;
-        mdIRF.row(t) = vdIRF1;
+        mdIRF.row(t).segment(0, nvar) = vdIRF1.transpose();
+        mdIRF(t,nvar) = t;
         vdIRF0 = vdIRF1;
     }
 

@@ -29,13 +29,35 @@
  * Conact: james@murraylax.org
 */
 
-#include "utils.h"
-
+#include <utils.h>
 #include <sstream>
 #include <iomanip>
+#include <iostream>
 
 using namespace std;
 using namespace Eigen;
+
+
+// Function to start the timer and return the start time point
+TimePoint start_timer() {
+    return std::chrono::steady_clock::now();
+}
+
+// Function to stop the timer, calculate the elapsed time, and print it
+void stop_timer(const TimePoint& start_time) {
+    auto end_time = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+
+    int minutes = duration.count() / 60000;
+    int seconds = (duration.count() % 60000) / 1000;
+    int milliseconds = duration.count() % 1000;
+
+    std::cout << "Elapsed time: " << minutes << " minute(s), "
+              << seconds << " second(s), and "
+              << milliseconds << " millisecond(s)." << std::endl;
+
+    return;
+}
 
 /**
  * copy_vector_to_gsl(const Eigen::VectorXd& eigen_input, gsl_vector* gsl_output)

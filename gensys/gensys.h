@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 James M. Murray
+ * Copyright 2024 James M. Murray
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,6 +52,17 @@
 #define _INCL_GENSYS
 
 #include <Eigen/Dense>
+
+/**
+ * write_irf(const Eigen::MatrixXd& mdIRF, const std::vector<std::string>& varnames, const std::string& filepath)
+ * 
+ * Write the impulse response functions to a text file to be easily read in R
+ * 
+ * @param mdIRF Matrix of impulse responses, return varlue of gensys_irf()
+ * @param varnames Vector of strings for the variable names
+ * @param filepath The filepath for the output
+ */
+void write_irf(const Eigen::MatrixXd& mdIRF, const std::vector<std::string>& varnames, const std::string& filepath);
 
 /**
  * Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, double fshock, size_t shock_idx, size_t nirf)
