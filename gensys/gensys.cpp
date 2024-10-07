@@ -48,8 +48,46 @@
  * Contact: james@murraylax.org
 */
 
-#include "gensys.h"
-#include "qz.h"
+#include <gensys.h>
+#include <qz.h>
+
+/**
+ * Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, double fshock, size_t shock_idx, size_t nirf)
+ * 
+ * Compute impulse responses for a given shock for a given solution of the dynamic system,  x_t = D + G x_t-1 + M z_t
+ * 
+ * @param mdG: Matrix G in the solution
+ * @param mdM: Matrix M in the solution
+ * @param fshock: Magnitude of the shock at time t=0
+ * @param shock_idx: Index into z_t for the specific shock
+ * @param nirf: Number of periods for the impulse response
+ * 
+ * @return Matrix size (nirf x nvar) for the impulse responses, where each row t is the response of x_t 
+ */
+Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, double fshock, size_t shock_idx, size_t nirf) {
+    size_t nvar = mdG.rows();
+    size_t nshocks = mdM.cols();
+    Eigen::MatrixXd mdIRF(nirf, nvar);
+    Eigen::VectorXd vdIRF0(nvar);
+    Eigen::VectorXd vdIRF1(nvar);
+    Eigen::VectorXd vdZ(nshocks);
+    vdIRF0.setZero();
+    vdZ.setZero();
+    vdZ(shock_idx) = fshock;
+
+    // Time t=0
+    vdIRF0 = mdM * vdZ;
+    mdIRF.row(0) = vdIRF0;
+    
+    // All other t
+    for(int t=1; t<nirf; t++) {
+        vdIRF1 = mdG * vdIRF0;
+        mdIRF.row(t) = vdIRF1;
+        vdIRF0 = vdIRF1;
+    }
+
+    return mdIRF;
+}
 
 /**
  * gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::MatrixXd& Dsol, const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC)

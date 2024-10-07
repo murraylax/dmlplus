@@ -54,6 +54,21 @@
 #include <Eigen/Dense>
 
 /**
+ * Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, double fshock, size_t shock_idx, size_t nirf)
+ * 
+ * Compute impulse responses for a given shock for a given solution of the dynamic system,  x_t = D + G x_t-1 + M z_t
+ * 
+ * @param mdG: Matrix G in the solution
+ * @param mdM: Matrix M in the solution
+ * @param fshock: Magnitude of the shock at time t=0
+ * @param shock_idx: Index into z_t for the specific shock
+ * @param nirf: Number of periods for the impulse response
+ * 
+ * @return Matrix size (nirf x nvar) for the impulse responses, where each row t is the response of x_t 
+ */
+Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, double fshock, size_t shock_idx, size_t nirf);
+
+/**
  * gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::MatrixXd& Dsol, const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC)
  * 
  * Use Sims (2002) method for solving a linear dynamic general equilibrium model
@@ -90,6 +105,7 @@
  * @param vdC (input) const Eigen::VectorXd with the constant vector C
  * 
 */
+
 int gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vDsol, const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC);
 
 int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vdDsol, 
