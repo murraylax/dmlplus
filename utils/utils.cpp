@@ -119,13 +119,13 @@ void write_eigen_csv(Eigen::VectorXd& vec, std::string& varname, std::string& fi
  * @param filepath String that contains the path and filename to write to
  */
 void write_eigen_csv(Eigen::MatrixXd& mat, std::vector<std::string>& varnames, std::string& filepath) {
-    ofstream csvfile(filepath);
+    std::ofstream csvfile(filepath);
     size_t nvar = mat.cols();
     size_t nrow = mat.rows();
     for(int i=0; i<nvar; i++) {
         csvfile << "\"" << varnames[i] << "\"";
-        if(i==(nvar=1)) {
-            csvfile << "\n";
+        if(i==(nvar-1)) {
+            csvfile << std::endl;
         } else {
             csvfile << ", ";
         }
@@ -134,7 +134,7 @@ void write_eigen_csv(Eigen::MatrixXd& mat, std::vector<std::string>& varnames, s
         for(int i=0; i<nvar; i++) {
             csvfile << mat(r,i);
             if(i==(nvar-1)) {
-                csvfile << "\n";
+                csvfile << std::endl;
             } else {
                 csvfile << ", ";
             }
