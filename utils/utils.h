@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 James M. Murray
+ * Copyright 2024 James M. Murray
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,11 +40,23 @@
 #include <Eigen/Dense>
 #include <chrono>
 
+// Write an Eigen::MatrixXd to a csv file
+void write_eigen_csv(const Eigen::MatrixXd& mat, const std::string& filepath);
+
+// Write an Eigen::VectorXd to a file, with a variable name at the top
+void write_eigen_csv(Eigen::VectorXd& vec, std::string& varname, std::string& filepath);
+
+// Write an Eigen::VectorXd to a csv file
+void write_eigen_csv(const Eigen::VectorXd& vec, const std::string& filepath);
+
+// Write an Eigen::MatrixXd to a csv file, including variable names
+void write_eigen_csv(Eigen::MatrixXd& mat, std::vector<std::string>& varnames, std::string& filepath);
+
 // Define a type alias for easier readability
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
 
 // Function to start the timer and return the start time point
-TimePoint start_timer();
+std::chrono::time_point<std::chrono::steady_clock> start_timer();
 // Function to stop the timer, calculate the elapsed time, and print it
 void stop_timer(const TimePoint& start_time);
 

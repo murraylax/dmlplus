@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 James M. Murray
+ * Copyright 2024 James M. Murray
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,25 +29,131 @@
  * Conact: james@murraylax.org
 */
 
-#include <utils.h>
+#include "utils.h"
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <chrono>
 
 using namespace std;
 using namespace Eigen;
 
+/**
+ * write_eigen_csv(Eigen::MatrixXd& mat, std::string& filepath)
+ * 
+ * Write an Eigen::MatrixXd to a csv file
+ * 
+ * @param mat Eigem::MatrixXd to write to file
+ * @param filepath String that contains the path and filename to write to
+ */
+void write_eigen_csv(const Eigen::MatrixXd& mat, const std::string& filepath) {
+    std::ofstream csvfile(filepath);
+    size_t nvar = mat.cols();
+    size_t nrow = mat.rows();
+
+    for(int r=0; r<nrow; r++) {
+        for(int i=0; i<nvar; i++) {
+            csvfile << mat(r,i);
+            if(i==(nvar-1)) {
+                csvfile << "\n";
+            } else {
+                csvfile << ", ";
+            }
+        }
+    }
+
+    csvfile.close();
+}
+
+/**
+ * write_eigen_csv(Eigen::VectorXd& vec, std::string& filepath)
+ * 
+ * Write an Eigen::VectorXd to a csv file
+ * 
+ * @param vec Eigen::VectorXd to write to file
+ * @param filepath String that contains the path and filename to write to
+ * 
+ */
+void write_eigen_csv(const Eigen::VectorXd& vec, const std::string& filepath) {
+    std::ofstream csvfile(filepath);
+
+    size_t nrow = vec.size();
+
+    for(int r=0; r<nrow; r++) {
+        csvfile << vec(r) << "\n";
+    }
+
+    csvfile.close();
+}
+
+/**
+ * write_eigen_csv(Eigen::VectorXd& vec, std::string& varname, std::string& filepath)
+ * 
+ * Write an Eigen::VectorXd to a file, with a variable name at the top
+ * 
+ * @param vec Eigen::VectorXd to write to file
+ * @param varname String that is the variable name for the vector
+ * @param filepath String that contains the path and filename to write to
+ */
+void write_eigen_csv(Eigen::VectorXd& vec, std::string& varname, std::string& filepath) {
+    std::ofstream csvfile(filepath);
+
+    size_t nrow = vec.rows();
+
+    csvfile << varname << "\n";
+    for(int r=0; r<nrow; r++) {
+        csvfile << vec(r) << "\n";
+    }
+
+    csvfile.close();
+}
+
+/**
+ * write_eigen_csv(Eigen::MatrixXd& mat, std::string& filepath)
+ * 
+ * Write an Eigen::MatrixXd to a csv file, including variable names
+ * 
+ * @param mat Eigen::MatrixXd to write to file
+ * @param varnames Vector of strings for the variable names, must have the same size as the number of columns of mat
+ * @param filepath String that contains the path and filename to write to
+ */
+void write_eigen_csv(Eigen::MatrixXd& mat, std::vector<std::string>& varnames, std::string& filepath) {
+    ofstream csvfile(filepath);
+    size_t nvar = mat.cols();
+    size_t nrow = mat.rows();
+    for(int i=0; i<nvar; i++) {
+        csvfile << "\"" << varnames[i] << "\"";
+        if(i==(nvar=1)) {
+            csvfile << "\n";
+        } else {
+            csvfile << ", ";
+        }
+    }
+    for(int r=0; r<nrow; r++) {
+        for(int i=0; i<nvar; i++) {
+            csvfile << mat(r,i);
+            if(i==(nvar-1)) {
+                csvfile << "\n";
+            } else {
+                csvfile << ", ";
+            }
+        }
+    }
+
+    csvfile.close();
+}
 
 // Function to start the timer and return the start time point
-TimePoint start_timer() {
+std::chrono::time_point<std::chrono::steady_clock> start_timer() {
     return std::chrono::steady_clock::now();
 }
 
 // Function to stop the timer, calculate the elapsed time, and print it
-void stop_timer(const TimePoint& start_time) {
+void stop_timer(const std::chrono::time_point<std::chrono::steady_clock>& start_time) {
     auto end_time = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-
+    
     int minutes = duration.count() / 60000;
     int seconds = (duration.count() % 60000) / 1000;
     int milliseconds = duration.count() % 1000;
