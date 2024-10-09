@@ -96,7 +96,6 @@ Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& md
     Eigen::VectorXd vdIRF0(nvar);
     Eigen::VectorXd vdIRF1(nvar);
     Eigen::VectorXd vdZ(nshocks);
-    vdIRF0.setZero();
     vdZ.setZero();
     vdZ(shock_idx) = fshock;
 
