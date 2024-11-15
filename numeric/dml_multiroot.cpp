@@ -185,7 +185,7 @@ Eigen::VectorXd dml_multiroot(
     multiroot_function_data funcData = setup_multiroot_function_data(func, params, lower_bounds, upper_bounds);
 
     // Set up GSL multiroot solver
-    const gsl_multiroot_fsolver_type* ftype = gsl_multiroot_fsolver_hybrids;
+    const gsl_multiroot_fsolver_type* ftype = gsl_multiroot_fsolver_hybrid;
     gsl_multiroot_fsolver* fsolver;
     gsl_multiroot_function fsystem; 
 
@@ -212,7 +212,8 @@ Eigen::VectorXd dml_multiroot(
         status = gsl_multiroot_fsolver_iterate(fsolver);
 
         if(status) {
-            throw std::runtime_error("Solver failed: " + std::string(gsl_strerror(status)));
+            std::string msg = "Solver failed after " + std::to_string(iter) + " iterations. " + std::string(gsl_strerror(status));
+            throw std::runtime_error(msg);
         }
 
         // Check residual
@@ -270,7 +271,7 @@ Eigen::VectorXd dml_multiroot(
     multiroot_function_data funcData = setup_multiroot_function_data(func, jacfunc, params, lower_bounds, upper_bounds);
 
     // Set up GSL multiroot solver
-    const gsl_multiroot_fdfsolver_type* fdftype = gsl_multiroot_fdfsolver_hybridsj;
+    const gsl_multiroot_fdfsolver_type* fdftype = gsl_multiroot_fdfsolver_gnewton;
     gsl_multiroot_fdfsolver* fdfsolver;
     gsl_multiroot_function_fdf fdfsystem; 
 
