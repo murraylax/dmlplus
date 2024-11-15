@@ -94,6 +94,12 @@ Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess,
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
                               const void* params, bool verbose);
 
+// Multiroot finder with Jacobian, with no lower and upper bounds given
+Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
+        std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+        std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
+        const void* params, bool verbose);
+
 // Multiroot finder with lower and upper bounds
 Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
                               const Eigen::VectorXd& lower_bounds,

@@ -233,6 +233,18 @@ Eigen::VectorXd dml_multiroot(
     return result;
 }
 
+// Multiroot finder with Jacobian, with no lower and upper bounds given
+Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
+        std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
+        std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
+        const void* params, bool verbose) {
+
+    Eigen::VectorXd lower_bounds(0);
+    Eigen::VectorXd upper_bounds(0);
+
+    return dml_multiroot(initial_guess, lower_bounds, upper_bounds, func, jacfunc, params, verbose);
+}
+
 // Multiroot finder with lower and upper bounds and Jacobian given
 Eigen::VectorXd dml_multiroot(
         const Eigen::VectorXd& initial_guess, 
@@ -258,7 +270,7 @@ Eigen::VectorXd dml_multiroot(
     multiroot_function_data funcData = setup_multiroot_function_data(func, jacfunc, params, lower_bounds, upper_bounds);
 
     // Set up GSL multiroot solver
-    const gsl_multiroot_fdfsolver_type* fdftype = gsl_multiroot_fdfsolver_gnewton;
+    const gsl_multiroot_fdfsolver_type* fdftype = gsl_multiroot_fdfsolver_hybridsj;
     gsl_multiroot_fdfsolver* fdfsolver;
     gsl_multiroot_function_fdf fdfsystem; 
 
