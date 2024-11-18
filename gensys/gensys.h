@@ -80,6 +80,20 @@ void write_irf(const Eigen::MatrixXd& mdIRF, const std::vector<std::string>& var
 Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, double fshock, size_t shock_idx, size_t nirf);
 
 /**
+ * Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, size_t nirf)
+ * 
+ * Compute impulse responses for a all shocks for a given solution of the dynamic system,  x_t = D + G x_t-1 + M z_t
+ * Assumes a magnitude for the shock = 0.01
+ * 
+ * @param mdG: Matrix G in the solution
+ * @param mdM: Matrix M in the solution
+ * @param nirf: Number of periods for the impulse response
+ * 
+ * @return Matrix size ((nirf*nshocks) x (nvar+2)) for the impulse responses, where each row t is the response of x_t. The second-to-last column is the index of the shock, last column is the time period.
+ */
+Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, size_t nirf);
+
+/**
  * gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::MatrixXd& Dsol, const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC)
  * 
  * Use Sims (2002) method for solving a linear dynamic general equilibrium model

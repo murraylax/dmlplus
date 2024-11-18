@@ -87,12 +87,12 @@ void write_irf(const Eigen::MatrixXd& mdIRF, const std::vector<std::string>& var
  * @param shock_idx: Index into z_t for the specific shock
  * @param nirf: Number of periods for the impulse response
  * 
- * @return Matrix size (nirf x (nvar+1)) for the impulse responses, where each row t is the response of x_t. The last column is the time period
+ * @return Matrix size (nirf x (nvar+2)) for the impulse responses, where each row t is the response of x_t. The second-to-last column is the index of the shock, last column is the time period.
  */
 Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, double fshock, size_t shock_idx, size_t nirf) {
     size_t nvar = mdG.rows();
     size_t nshocks = mdM.cols();
-    Eigen::MatrixXd mdIRF(nirf, nvar+1);
+    Eigen::MatrixXd mdIRF(nirf, nvar+2);
     Eigen::VectorXd vdIRF0(nvar);
     Eigen::VectorXd vdIRF1(nvar);
     Eigen::VectorXd vdZ(nshocks);
@@ -108,11 +108,68 @@ Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& md
     for(int t=1; t<nirf; t++) {
         vdIRF1 = mdG * vdIRF0;
         mdIRF.row(t).segment(0, nvar) = vdIRF1.transpose();
-        mdIRF(t,nvar) = t;
+        mdIRF(t,nvar) = shock_idx;
+        mdIRF(t,nvar+1) = t; // Time period
         vdIRF0 = vdIRF1;
     }
 
     return mdIRF;
+}
+
+/**
+ * Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, size_t nirf)
+ * 
+ * Compute impulse responses for a all shocks for a given solution of the dynamic system,  x_t = D + G x_t-1 + M z_t
+ * Assumes a magnitude for the shock = 0.01
+ * 
+ * @param mdG: Matrix G in the solution
+ * @param mdM: Matrix M in the solution
+ * @param nirf: Number of periods for the impulse response
+ * 
+ * @return Matrix size ((nirf*nshocks) x (nvar+2)) for the impulse responses, where each row t is the response of x_t. The second-to-last column is the index of the shock, last column is the time period.
+ */
+Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, size_t nirf) {
+    size_t nvar = mdG.rows();
+    size_t nshocks = mdM.cols();
+    Eigen::MatrixXd mdIRF_s(nirf, nvar+2);
+    Eigen::MatrixXd mdIRF_all(nirf*nshocks, nvar+2);
+    double fshock = 1.0;
+
+    for(size_t s=0; s<nshocks; s++) {
+        mdIRF_s = gensys_irf(mdG, mdM, fshock, s, nirf);
+        mdIRF_all.block(s*nirf, 0, nirf, nvar+2) = mdIRF_s;
+    }
+
+    return mdIRF_all;
+}
+
+
+// I'M RIGHT HERE!!
+void write_irf_to_csvfile(const Eigen::MatrixXd& mdIRF, std::vector<std::string>& varnames, std::vector<std::string>& shocknames, std::string& filepath) {
+    std::ofstream csvfile(filepath);
+
+    size_t nvar = mdIRF.cols() - 2;
+    size_t nrow = mdIRF.rows();
+
+    for(int i=0; i<nvar; i++) {
+        csvfile << varnames[i] << ", ";
+    }
+    csvfile << "Shock, " << "Time" << "\n";
+
+    for(int r=0; r<nrow; r++) {
+        for(int i=0; i<nvar; i++) {
+            csvfile << mat(r,i);
+            if(i==(nvar-1)) {
+                csvfile << shocknames[(size_t)(mat(r,nvar))] << ", " << (size_t)(mat(r,nvar+1));
+                csvfile << "\n";
+            } else {
+                csvfile << ", ";
+            }
+        }
+    }
+
+    csvfile.close();
+
 }
 
 /**
