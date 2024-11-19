@@ -147,6 +147,8 @@ Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& md
 /**
  * Write impulse response functions to a csv file, designed for easy import into R
  * 
+ * Includes variable names in the first row
+ * 
  * @param mdIRF: Eigen::MatrixXd of impulse response functions
  * @param varnames: Vector of strings for the variable names - columns of mdIRF
  * @param shocknames: Vector of strings for the shock names 
@@ -162,6 +164,35 @@ void write_irf_to_csvfile(const Eigen::MatrixXd& mdIRF, std::vector<std::string>
         csvfile << varnames[i] << ", ";
     }
     csvfile << "Shock, Time, Description\n";
+
+    for(size_t r=0; r<nrow; r++) {
+        for(size_t i=0; i<nvar; i++) {
+            csvfile << mdIRF(r,i);
+            if(i==(nvar-1)) {
+                csvfile << ", \"" << shocknames[(size_t)(mdIRF(r,nvar))] << "\", " << (size_t)(mdIRF(r,nvar+1)) << ", " << "\"" << desc <<"\"\n";
+            } else {
+                csvfile << ", ";
+            }
+        }
+    }
+
+    return;
+}
+
+/**
+ * Write impulse response functions to a csv file, designed for easy import into R
+ * 
+ * No header row
+ * 
+ * @param mdIRF: Eigen::MatrixXd of impulse response functions
+ * @param shocknames: Vector of strings for the shock names 
+ * @param desc: String for a description of the IRF - will be entered in the last column
+ * @param csvfile: file to write, std::ofstream
+ */
+void write_irf_to_csvfile(const Eigen::MatrixXd& mdIRF, std::vector<std::string>& shocknames, std::string& desc, std::ofstream& csvfile) {
+
+    size_t nvar = mdIRF.cols() - 2;
+    size_t nrow = mdIRF.rows();
 
     for(size_t r=0; r<nrow; r++) {
         for(size_t i=0; i<nvar; i++) {
