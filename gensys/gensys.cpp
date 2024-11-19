@@ -133,7 +133,7 @@ Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& md
     size_t nshocks = mdM.cols();
     Eigen::MatrixXd mdIRF_s(nirf, nvar+2);
     Eigen::MatrixXd mdIRF_all(nirf*nshocks, nvar+2);
-    double fshock = 1.0;
+    double fshock = 0.01;
 
     for(size_t s=0; s<nshocks; s++) {
         mdIRF_s = gensys_irf(mdG, mdM, fshock, s, nirf);
@@ -167,8 +167,7 @@ void write_irf_to_csvfile(const Eigen::MatrixXd& mdIRF, std::vector<std::string>
         for(size_t i=0; i<nvar; i++) {
             csvfile << mdIRF(r,i);
             if(i==(nvar-1)) {
-                csvfile << shocknames[(size_t)(mdIRF(r,nvar))] << ", " << (size_t)(mdIRF(r,nvar+1)) << ", " << desc;
-                csvfile << "\n";
+                csvfile << ", \"" << shocknames[(size_t)(mdIRF(r,nvar))] << "\", " << (size_t)(mdIRF(r,nvar+1)) << ", " << "\"" << desc <<"\"\n";
             } else {
                 csvfile << ", ";
             }
