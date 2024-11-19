@@ -131,6 +131,18 @@ Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& md
  * 
 */
 
+/**
+ * Write impulse response functions to a csv file, designed for easy import into R
+ * 
+ * @param mdIRF: Eigen::MatrixXd of impulse response functions
+ * @param varnames: Vector of strings for the variable names - columns of mdIRF
+ * @param shocknames: Vector of strings for the shock names 
+ * @param desc: String for a description of the IRF - will be entered in the last column
+ * @param csvfile: file to write, std::ofstream
+ */
+void write_irf_to_csvfile(const Eigen::MatrixXd& mdIRF, std::vector<std::string>& varnames, std::vector<std::string>& shocknames, std::string& desc, std::ofstream& csvfile);
+
+
 int gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vDsol, const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC);
 
 int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vdDsol, 
