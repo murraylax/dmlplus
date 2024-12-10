@@ -102,7 +102,8 @@ Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& md
     // Time t=0
     vdIRF0 = mdM * vdZ;
     mdIRF.row(0).segment(0, nvar) = vdIRF0.transpose();
-    mdIRF(0,nvar) = 0;
+    mdIRF(0,nvar) = shock_idx; 
+    mdIRF(0,nvar+1) = 0; // Time period
     
     // All other t
     for(int t=1; t<nirf; t++) {
