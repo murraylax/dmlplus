@@ -34,34 +34,28 @@
 
 using namespace std;
  
+ // A function to set up a multiroot_function_data struct, including function, Jacobian, and parameters
 multiroot_function_data setup_multiroot_function_data(
         std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
         std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
-        const void* params,
-        const Eigen::VectorXd& lower_bounds,
-        const Eigen::VectorXd& upper_bounds) {
+        const void* params) {
 
     multiroot_function_data funcData;
     funcData.func = func;
     funcData.jacfunc = jacfunc;
     funcData.params = params;
-    funcData.lower_bounds = lower_bounds;
-    funcData.upper_bounds = upper_bounds;
 
     return funcData;
 }
 
+// A function to set up a multiroot_function_data struct, including function and parameters
 multiroot_function_data setup_multiroot_function_data(
         std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-        const void* params,
-        const Eigen::VectorXd& lower_bounds,
-        const Eigen::VectorXd& upper_bounds) {
+        const void* params) {
 
     multiroot_function_data funcData;
     funcData.func = func;
     funcData.params = params;
-    funcData.lower_bounds = lower_bounds;
-    funcData.upper_bounds = upper_bounds;
 
     return funcData;
 }
@@ -72,34 +66,8 @@ int multiroot_gsl_f(const gsl_vector* gsl_x, void* data, gsl_vector* gsl_f) {
     Eigen::VectorXd current_x(n);
     copy_gsl_to_vector(current_x, gsl_x);
 
-    double fpenalty_multiplier = 1000.0;
-
-    // Penalty if beyond the bounds
-    Eigen::VectorXd penalty(n);
-    penalty.setConstant(0.0);
-
-    if(funcData->lower_bounds.size() > 0 && funcData->upper_bounds.size() > 0) {
-        for(int i = 0; i < n; i++) {
-            if(current_x(i) > funcData->upper_bounds(i)) {
-                penalty(i) = fpenalty_multiplier * pow(current_x(i) - funcData->upper_bounds(i), 2.0);
-                current_x(i) = funcData->upper_bounds(i); // Set the current_x to upper bound
-            } 
-            if(current_x(i) < funcData->lower_bounds(i)) {
-                penalty(i) = fpenalty_multiplier * pow(current_x(i) - funcData->lower_bounds(i), 2.0);
-                current_x(i) = funcData->lower_bounds(i); // Set the current_x to lower bound
-            }     
-        }
-    }
-
     // Call the user's function 
     Eigen::VectorXd result = funcData->func(current_x, funcData->params);
-
-    // Impose penalty if necessary
-    for(int i = 0; i < n; i++) {
-        if(penalty(i) > 0) {
-            result(i) = result(i)*result(i) + penalty(i);
-        }
-    }
 
     // Copy the result to a gsl_vector for the output
     copy_vector_to_gsl(gsl_f, result);
@@ -133,44 +101,16 @@ Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess,
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
                               const void* params) {
 
-    Eigen::VectorXd lower_bounds(0);
-    Eigen::VectorXd upper_bounds(0);
     bool verbose = false;
 
-    return dml_multiroot(initial_guess, lower_bounds, upper_bounds, func, params, verbose);
-}
-
-// Multiroot finder with upper and lower bounds given, but no value for verbose
-Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
-                              const Eigen::VectorXd& lower_bounds,
-                              const Eigen::VectorXd& upper_bounds,
-                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-                              const void* params) {
-    return dml_multiroot(initial_guess, lower_bounds, upper_bounds, func, params, false);
-}
-
-
-
-
-// Multiroot finder with no lower and upper bounds given
-Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
-                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-                              const void* params, bool verbose) {
-
-    Eigen::VectorXd lower_bounds(0);
-    Eigen::VectorXd upper_bounds(0);
-
-    return dml_multiroot(initial_guess, lower_bounds, upper_bounds, func, params, verbose);
+    return dml_multiroot(initial_guess, func, params, verbose);
 }
         
 // Multiroot finder with lower and upper bounds - No Jacobian
 Eigen::VectorXd dml_multiroot(
         const Eigen::VectorXd& initial_guess, 
-        const Eigen::VectorXd& lower_bounds,
-        const Eigen::VectorXd& upper_bounds,
         std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-        const void* params, 
-        bool verbose) {
+        const void* params, bool verbose) {
 
     int max_iterations = 100000; // Maximum number of iterations
     double ftol = 1e-8; // 
@@ -182,7 +122,7 @@ Eigen::VectorXd dml_multiroot(
     copy_vector_to_gsl(gsl_x, initial_guess);
 
     // Set up the function data
-    multiroot_function_data funcData = setup_multiroot_function_data(func, params, lower_bounds, upper_bounds);
+    multiroot_function_data funcData = setup_multiroot_function_data(func, params);
 
     // Set up GSL multiroot solver
     const gsl_multiroot_fsolver_type* ftype = gsl_multiroot_fsolver_hybrid;
@@ -234,23 +174,9 @@ Eigen::VectorXd dml_multiroot(
     return result;
 }
 
-// Multiroot finder with Jacobian, with no lower and upper bounds given
-Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
-        std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-        std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
-        const void* params, bool verbose) {
-
-    Eigen::VectorXd lower_bounds(0);
-    Eigen::VectorXd upper_bounds(0);
-
-    return dml_multiroot(initial_guess, lower_bounds, upper_bounds, func, jacfunc, params, verbose);
-}
-
 // Multiroot finder with lower and upper bounds and Jacobian given
 Eigen::VectorXd dml_multiroot(
         const Eigen::VectorXd& initial_guess, 
-        const Eigen::VectorXd& lower_bounds,
-        const Eigen::VectorXd& upper_bounds,
         std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
         std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
         const void* params, 
@@ -268,7 +194,7 @@ Eigen::VectorXd dml_multiroot(
     copy_vector_to_gsl(gsl_x, initial_guess);
 
     // Set up the function data
-    multiroot_function_data funcData = setup_multiroot_function_data(func, jacfunc, params, lower_bounds, upper_bounds);
+    multiroot_function_data funcData = setup_multiroot_function_data(func, jacfunc, params);
 
     // Set up GSL multiroot solver
     const gsl_multiroot_fdfsolver_type* fdftype = gsl_multiroot_fdfsolver_gnewton;

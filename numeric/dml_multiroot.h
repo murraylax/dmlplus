@@ -45,30 +45,22 @@ struct multiroot_function_data {
 
     // This a generic object of parameters to pass to func()
     const void* params; 
-
-    // Upper bounds 
-    Eigen::VectorXd upper_bounds;
-    // Lower bounds 
-    Eigen::VectorXd lower_bounds;
-
 };
 
-// A function to set up a RootFunctionData struct 
+// A function to set up a multiroot_function_data struct, including function, Jacobian, and parameters
 multiroot_function_data setup_multiroot_function_data(
     std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
     std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
-    const void* params,
-    Eigen::VectorXd& lower_bounds,
-    Eigen::VectorXd& upper_bounds);
+    const void* params);
 
+// A function to set up a multiroot_function_data struct, including function and parameters
 multiroot_function_data setup_multiroot_function_data(
     std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-    const void* params,
-    const Eigen::VectorXd& lower_bounds,
-    const Eigen::VectorXd& upper_bounds);
+    const void* params);
 
 // GSL wrapper for the user-defined function to minimize
 int multiroot_gsl_f(const gsl_vector* gsl_x, void* data, gsl_vector* gsl_f);
+
 // GSL wrapper for the Jacobian of the function. It does not currently do anything
 int multiroot_gsl_df(const gsl_vector* gsl_x, void* data, gsl_matrix* J);
 // Combined GSL wrapper for the user-defined function and the Jacobian
@@ -76,46 +68,26 @@ int multiroot_gsl_fdf(const gsl_vector* x, void* data, gsl_vector* f, gsl_matrix
 
 // Here are all the versions of the dml_multiroot() function
 
-// Multiroot finder with no lower and upper bounds, and no value for verbose
+// Multiroot finder with no value for verbose
 Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
                               const void* params);
 
 
-// Multiroot finder with upper and lower bounds given, but no value for verbose
-Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
-                              const Eigen::VectorXd& lower_bounds,
-                              const Eigen::VectorXd& upper_bounds,
-                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-                              const void* params);
-
-// Multiroot finder with no lower and upper bounds given
+// Multiroot finder with option for verbosity
 Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
                               const void* params, bool verbose);
 
-// Multiroot finder with Jacobian, with no lower and upper bounds given
+// Multiroot finder with Jacobian
 Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
         std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
         std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
         const void* params, bool verbose);
 
-// Multiroot finder with lower and upper bounds
+// Multiroot finder
 Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
-                              const Eigen::VectorXd& lower_bounds,
-                              const Eigen::VectorXd& upper_bounds,
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-                              const void* params, 
-                              bool verbose);
-
-// Multiroot finder with lower and upper bounds and Jacobian given
-Eigen::VectorXd dml_multiroot(
-        const Eigen::VectorXd& initial_guess, 
-        const Eigen::VectorXd& lower_bounds,
-        const Eigen::VectorXd& upper_bounds,
-        std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-        std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
-        const void* params, 
-        bool verbose);
+                              const void* params, bool verbose);
 
 #endif
