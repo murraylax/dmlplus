@@ -48,8 +48,8 @@
  * Contact: james@murraylax.org
 */
 
-#include <gensys.h>
-#include <qz.h>
+#include "gensys.h"
+#include "qz.h"
 #include <fstream>
 #include <iostream>
 
@@ -278,6 +278,7 @@ int gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vd
     Eigen::MatrixXcd mcdS12 = mcdS.block(0,nstable,nstable,nunstable);
     Eigen::MatrixXcd mcdS22 = mcdS.block(nstable,nstable,nunstable,nunstable);
     Eigen::MatrixXcd mcdT11 = mcdT.block(0,0,nstable,nstable);
+    Eigen::MatrixXcd mcdT12 = mcdT.block(0,nstable,nstable,nunstable);
     Eigen::MatrixXcd mcdT22 = mcdT.block(nstable,nstable,nunstable,nunstable);
     Eigen::MatrixXcd mcdPsi1 = mcdPsi_tilde.block(0,0,nstable,nshocks);
     Eigen::MatrixXcd mcdPsi2 = mcdPsi_tilde.block(nstable,0,nunstable,nshocks);
@@ -309,18 +310,42 @@ int gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vd
         return nloose; // Leave the function, nothing more to do here
     } 
 
-    // G = Z_1 S_{11}^{-1} T_{11} Z_1' 
-    Eigen::MatrixXcd mcdGsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve(mcdT11 * mcdZ1.adjoint());
+    // Forward solution for unstable block: phi_z = -Pi2^{-1} Psi2
+    Eigen::MatrixXcd mcdPhi_z = -mcdPi2.colPivHouseholderQr().solve(mcdPsi2);
 
-    // M = Z_1 S_{11}^{-1} ( \tilde{\Psi}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{\Psi}_2)
-    Eigen::MatrixXcd mcdMsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( mcdPsi1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(mcdPsi2) );
+    // Forward solution for unstable block constant: phi_c = (S22 - T22)^{-1} C2
+    Eigen::MatrixXcd mcdS22_minus_T22 = mcdS22 - mcdT22;
+    Eigen::VectorXcd vcdPhi_c = mcdS22_minus_T22.colPivHouseholderQr().solve(vcdC2);
 
-    // D = Z_1 * S_{11}^{-1} (  \tilde{C}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{C}_2)
-    Eigen::VectorXcd vcdDsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( vcdC1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(vcdC2)) ;
+    // G = Z_1 S_{11}^{-1} (T_{11} Z_1' + T_{12} Z_2')
+    Eigen::MatrixXcd mcdGsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve(mcdT11 * mcdZ1.adjoint() + mcdT12 * mcdZ2.adjoint());
+
+    // M = Z_1 S_{11}^{-1} (Psi1 - S12 * phi_z - Pi1 * Pi2^{-1} * Psi2) + Z_2 * phi_z
+    Eigen::MatrixXcd mcdMsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( 
+        mcdPsi1 - mcdS12 * mcdPhi_z - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(mcdPsi2) ) 
+        + mcdZ2 * mcdPhi_z;
+
+    // D = Z_1 * S_{11}^{-1} (C1 - S12 * phi_c - Pi1 * Pi2^{-1} * C2) + Z_2 * phi_c
+    Eigen::VectorXcd vcdDsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( 
+        vcdC1 - mcdS12 * vcdPhi_c - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(vcdC2) ) 
+        + mcdZ2 * vcdPhi_c;
 
     mdGsol = mcdGsol.real();
     mdMsol = mcdMsol.real();
     vdDsol = vcdDsol.real();
+
+    // // G = Z_1 S_{11}^{-1} T_{11} Z_1' 
+    // Eigen::MatrixXcd mcdGsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve(mcdT11 * mcdZ1.adjoint());
+
+    // // M = Z_1 S_{11}^{-1} ( \tilde{\Psi}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{\Psi}_2)
+    // Eigen::MatrixXcd mcdMsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( mcdPsi1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(mcdPsi2) );
+
+    // // D = Z_1 * S_{11}^{-1} (  \tilde{C}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{C}_2)
+    // Eigen::VectorXcd vcdDsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( vcdC1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(vcdC2)) ;
+
+    // mdGsol = mcdGsol.real();
+    // mdMsol = mcdMsol.real();
+    // vdDsol = vcdDsol.real();
 
     return 0;
 }
@@ -354,6 +379,7 @@ int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::Ve
     Eigen::MatrixXcd mcdS12 = mcdS.block(0,nstable,nstable,nunstable);
     Eigen::MatrixXcd mcdS22 = mcdS.block(nstable,nstable,nunstable,nunstable);
     Eigen::MatrixXcd mcdT11 = mcdT.block(0,0,nstable,nstable);
+    Eigen::MatrixXcd mcdT12 = mcdT.block(0,nstable,nstable,nunstable);
     Eigen::MatrixXcd mcdT22 = mcdT.block(nstable,nstable,nunstable,nunstable);
     Eigen::MatrixXcd mcdPsi1 = mcdPsi_tilde.block(0,0,nstable,nshocks);
     Eigen::MatrixXcd mcdPsi2 = mcdPsi_tilde.block(nstable,0,nunstable,nshocks);
@@ -385,18 +411,42 @@ int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::Ve
         return nloose; // Leave the function, nothing more to do here
     } 
 
-    // G = Z_1 S_{11}^{-1} T_{11} Z_1' 
-    Eigen::MatrixXcd mcdGsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve(mcdT11 * mcdZ1.adjoint());
+    // Forward solution for unstable block: phi_z = -Pi2^{-1} Psi2
+    Eigen::MatrixXcd mcdPhi_z = -mcdPi2.colPivHouseholderQr().solve(mcdPsi2);
 
-    // M = Z_1 S_{11}^{-1} ( \tilde{\Psi}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{\Psi}_2)
-    Eigen::MatrixXcd mcdMsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( mcdPsi1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(mcdPsi2) );
+    // Forward solution for unstable block constant: phi_c = (S22 - T22)^{-1} C2
+    Eigen::MatrixXcd mcdS22_minus_T22 = mcdS22 - mcdT22;
+    Eigen::VectorXcd vcdPhi_c = mcdS22_minus_T22.colPivHouseholderQr().solve(vcdC2);
 
-    // D = Z_1 * S_{11}^{-1} (  \tilde{C}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{C}_2)
-    Eigen::VectorXcd vcdDsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( vcdC1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(vcdC2)) ;
+    // G = Z_1 S_{11}^{-1} (T_{11} Z_1' + T_{12} Z_2')
+    Eigen::MatrixXcd mcdGsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve(mcdT11 * mcdZ1.adjoint() + mcdT12 * mcdZ2.adjoint());
+
+    // M = Z_1 S_{11}^{-1} (Psi1 - S12 * phi_z - Pi1 * Pi2^{-1} * Psi2) + Z_2 * phi_z
+    Eigen::MatrixXcd mcdMsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( 
+        mcdPsi1 - mcdS12 * mcdPhi_z - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(mcdPsi2) ) 
+        + mcdZ2 * mcdPhi_z;
+
+    // D = Z_1 * S_{11}^{-1} (C1 - S12 * phi_c - Pi1 * Pi2^{-1} * C2) + Z_2 * phi_c
+    Eigen::VectorXcd vcdDsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( 
+        vcdC1 - mcdS12 * vcdPhi_c - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(vcdC2) ) 
+        + mcdZ2 * vcdPhi_c;
 
     mdGsol = mcdGsol.real();
     mdMsol = mcdMsol.real();
     vdDsol = vcdDsol.real();
+
+    // // G = Z_1 S_{11}^{-1} T_{11} Z_1' 
+    // Eigen::MatrixXcd mcdGsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve(mcdT11 * mcdZ1.adjoint());
+
+    // // M = Z_1 S_{11}^{-1} ( \tilde{\Psi}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{\Psi}_2)
+    // Eigen::MatrixXcd mcdMsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( mcdPsi1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(mcdPsi2) );
+
+    // // D = Z_1 * S_{11}^{-1} (  \tilde{C}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{C}_2)
+    // Eigen::VectorXcd vcdDsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( vcdC1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(vcdC2)) ;
+
+    // mdGsol = mcdGsol.real();
+    // mdMsol = mcdMsol.real();
+    // vdDsol = vcdDsol.real();
 
     return nloose;
 }
@@ -444,7 +494,7 @@ int checksys(const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, c
 
     // Convert input matrices to complex matrices
     Eigen::MatrixXcd mcdGamma0 = mdGamma0.cast<std::complex<double>>();
-    Eigen::MatrixXcd mcdGamma1 = mdGamma0.cast<std::complex<double>>();
+    Eigen::MatrixXcd mcdGamma1 = mdGamma1.cast<std::complex<double>>();
     Eigen::MatrixXcd mcdPsi = mdPsi.cast<std::complex<double>>();
     Eigen::MatrixXcd mcdPi = mdPi.cast<std::complex<double>>();
     Eigen::VectorXcd vcdC = vdC.cast<std::complex<double>>();
