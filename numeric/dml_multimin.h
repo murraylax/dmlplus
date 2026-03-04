@@ -22,7 +22,7 @@
  *
  * @brief 
  * This is a numeric multivariate minimizer using vectors/matrices defined by the Eigen package. 
- * It is a wrapper for the C gsl_multimin functions from the GNU Scientific Library (https://www.gnu.org/software/gsl/doc/html/multiroots.html)
+ * It is a wrapper for the C gsl_multimin functions from the GNU Scientific Library (https://www.gnu.org/software/gsl/doc/html/multimin.html)
  * 
  * @author James Murray
  * Contact: jmurray@uwlax.edu
@@ -35,51 +35,91 @@
 #include <gsl/gsl_multimin.h>
 #include <functional>
 
-// The parameter to pass to the GSL wrapped function. It includes both the user-provided function and the user-provided parameters
+/**
+ * @brief Parameters passed to the GSL-wrapped objective function.
+ */
 struct multimin_function_data {
-    // func is the function to be solved. This is a function from R^n to R^1 to minimize
-    std::function<double(const Eigen::VectorXd&, const void*)> func;
-
-    // This a generic object of parameters to pass to func()
-    const void* params; 
-
-    // Upper bounds 
-    Eigen::VectorXd upper_bounds;
-    // Lower bounds 
-    Eigen::VectorXd lower_bounds;
-
+    std::function<double(const Eigen::VectorXd&, const void*)> func; ///< Objective function \f$ f : \mathbb{R}^n \to \mathbb{R} \f$ to minimize
+    const void* params;          ///< User-supplied parameter pointer passed through to func()
+    Eigen::VectorXd upper_bounds; ///< Element-wise upper bounds on the solution
+    Eigen::VectorXd lower_bounds; ///< Element-wise lower bounds on the solution
 };
 
-// A function to set up a FunctionData struct 
+/**
+ * @brief Construct a multimin_function_data struct.
+ *
+ * @param func         Objective function to minimize
+ * @param params       User-supplied parameter pointer
+ * @param lower_bounds Element-wise lower bounds
+ * @param upper_bounds Element-wise upper bounds
+ * @return Populated multimin_function_data
+ */
 multimin_function_data setup_multimin_function_data(std::function<double(const Eigen::VectorXd&, const void* data)> func,
                                  const void* params,
                                  Eigen::VectorXd& lower_bounds,
                                  Eigen::VectorXd& upper_bounds);
 
-// GSL wrapper for the user-defined function to minimize
+/**
+ * @brief GSL-compatible wrapper that calls the user-defined objective function.
+ *
+ * @param gsl_x Current point as a gsl_vector
+ * @param data  Pointer to a multimin_function_data struct
+ * @return Objective function value at gsl_x
+ */
 double multimin_gsl_f(const gsl_vector* gsl_x, void* data);
 
-// Here are all the versions of the dml_multimin() function
-
-// Multiple dimensional minimizer with no lower and upper bounds, and no value for verbose
+/**
+ * @brief Find the minimum of a multivariate function using GSL.
+ *
+ * @param initial_guess Starting point for the search
+ * @param func          Objective function \f$ f(x, \text{params}) \f$
+ * @param params        User-supplied parameter pointer
+ * @return Vector at the minimum
+ */
 Eigen::VectorXd dml_multimin(const Eigen::VectorXd& initial_guess, 
                               std::function<double(const Eigen::VectorXd&, const void* data)> func,
                               const void* params);
 
-
-// Multiple dimensional minimizer with upper and lower bounds given, but no value for verbose
+/**
+ * @brief Find the minimum of a multivariate function with box constraints.
+ *
+ * @param initial_guess Starting point for the search
+ * @param lower_bounds  Element-wise lower bounds
+ * @param upper_bounds  Element-wise upper bounds
+ * @param func          Objective function \f$ f(x, \text{params}) \f$
+ * @param params        User-supplied parameter pointer
+ * @return Vector at the minimum
+ */
 Eigen::VectorXd dml_multimin(const Eigen::VectorXd& initial_guess, 
                               const Eigen::VectorXd& lower_bounds,
                               const Eigen::VectorXd& upper_bounds,
                               std::function<double(const Eigen::VectorXd&, const void* data)> func,
                               const void* params);
 
-// Multiple dimensional minimizer with no lower and upper bounds given
+/**
+ * @brief Find the minimum of a multivariate function with optional verbose output.
+ *
+ * @param initial_guess Starting point for the search
+ * @param func          Objective function \f$ f(x, \text{params}) \f$
+ * @param params        User-supplied parameter pointer
+ * @param verbose       If true, print iteration progress to stdout
+ * @return Vector at the minimum
+ */
 Eigen::VectorXd dml_multimin(const Eigen::VectorXd& initial_guess, 
                               std::function<double(const Eigen::VectorXd&, const void* data)> func,
                               const void* params, bool verbose);
 
-// Multiple dimensional minimizer with lower and upper bounds
+/**
+ * @brief Find the minimum of a multivariate function with box constraints and optional verbose output.
+ *
+ * @param initial_guess Starting point for the search
+ * @param lower_bounds  Element-wise lower bounds
+ * @param upper_bounds  Element-wise upper bounds
+ * @param func          Objective function \f$ f(x, \text{params}) \f$
+ * @param params        User-supplied parameter pointer
+ * @param verbose       If true, print iteration progress to stdout
+ * @return Vector at the minimum
+ */
 Eigen::VectorXd dml_multimin(const Eigen::VectorXd& initial_guess, 
                               const Eigen::VectorXd& lower_bounds,
                               const Eigen::VectorXd& upper_bounds,

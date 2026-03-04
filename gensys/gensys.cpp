@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 James M. Murray
+ * Copyright 2026 James M. Murray
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,15 +53,7 @@
 #include <fstream>
 #include <iostream>
 
-/**
- * write_irf(const Eigen::MatrixXd& mdIRF, const std::vector<std::string>& varnames, const std::string& filepath)
- * 
- * Write the impulse response functions to a text file to be easily read in R
- * 
- * @param mdIRF Matrix of impulse responses, return varlue of gensys_irf()
- * @param varnames Vector of strings for the variable names
- * @param filepath The filepath for the output
- */
+// Write impulse response functions to a text file, with a header row of variable names.
 void write_irf(const Eigen::MatrixXd& mdIRF, const std::vector<std::string>& varnames, const std::string& filepath) {
     std::ofstream irffile(filepath);
     size_t nvar = mdIRF.cols() - 1;
@@ -76,19 +68,8 @@ void write_irf(const Eigen::MatrixXd& mdIRF, const std::vector<std::string>& var
     return;
 }
 
-/**
- * Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, double fshock, size_t shock_idx, size_t nirf)
- * 
- * Compute impulse responses for a given shock for a given solution of the dynamic system,  x_t = D + G x_t-1 + M z_t
- * 
- * @param mdG: Matrix G in the solution
- * @param mdM: Matrix M in the solution
- * @param fshock: Magnitude of the shock at time t=0
- * @param shock_idx: Index into z_t for the specific shock
- * @param nirf: Number of periods for the impulse response
- * 
- * @return Matrix size (nirf x (nvar+2)) for the impulse responses, where each row t is the response of x_t. The second-to-last column is the index of the shock, last column is the time period.
- */
+// Compute impulse responses for a single shock over nirf periods. Returns an (nirf x nvar+2) matrix;
+// the second-to-last column is the shock index, the last column is the time period.
 Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, double fshock, size_t shock_idx, size_t nirf) {
     size_t nvar = mdG.rows();
     size_t nshocks = mdM.cols();
@@ -117,18 +98,8 @@ Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& md
     return mdIRF;
 }
 
-/**
- * Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, size_t nirf)
- * 
- * Compute impulse responses for a all shocks for a given solution of the dynamic system,  x_t = D + G x_t-1 + M z_t
- * Assumes a magnitude for the shock = 0.01
- * 
- * @param mdG: Matrix G in the solution
- * @param mdM: Matrix M in the solution
- * @param nirf: Number of periods for the impulse response
- * 
- * @return Matrix size ((nirf*nshocks) x (nvar+2)) for the impulse responses, where each row t is the response of x_t. The second-to-last column is the index of the shock, last column is the time period.
- */
+// Compute impulse responses for all shocks (magnitude 0.01) over nirf periods.
+// Returns a stacked ((nirf*nshocks) x nvar+2) matrix; second-to-last column is shock index, last is time period.
 Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& mdM, size_t nirf) {
     size_t nvar = mdG.rows();
     size_t nshocks = mdM.cols();
@@ -145,17 +116,7 @@ Eigen::MatrixXd gensys_irf(const Eigen::MatrixXd& mdG, const Eigen::MatrixXd& md
 }
 
 
-/**
- * Write impulse response functions to a csv file, designed for easy import into R
- * 
- * Includes variable names in the first row
- * 
- * @param mdIRF: Eigen::MatrixXd of impulse response functions
- * @param varnames: Vector of strings for the variable names - columns of mdIRF
- * @param shocknames: Vector of strings for the shock names 
- * @param desc: String for a description of the IRF - will be entered in the last column
- * @param csvfile: file to write, std::ofstream
- */
+// Write impulse response functions to a CSV file with a header row of variable names, shock names, and a description column.
 void write_irf_to_csvfile(const Eigen::MatrixXd& mdIRF, std::vector<std::string>& varnames, std::vector<std::string>& shocknames, std::string& desc, std::ofstream& csvfile) {
 
     size_t nvar = mdIRF.cols() - 2;
@@ -180,16 +141,7 @@ void write_irf_to_csvfile(const Eigen::MatrixXd& mdIRF, std::vector<std::string>
     return;
 }
 
-/**
- * Write impulse response functions to a csv file, designed for easy import into R
- * 
- * No header row
- * 
- * @param mdIRF: Eigen::MatrixXd of impulse response functions
- * @param shocknames: Vector of strings for the shock names 
- * @param desc: String for a description of the IRF - will be entered in the last column
- * @param csvfile: file to write, std::ofstream
- */
+// Write impulse response functions to a CSV file with no header row.
 void write_irf_to_csvfile(const Eigen::MatrixXd& mdIRF, std::vector<std::string>& shocknames, std::string& desc, std::ofstream& csvfile) {
 
     size_t nvar = mdIRF.cols() - 2;
@@ -209,46 +161,10 @@ void write_irf_to_csvfile(const Eigen::MatrixXd& mdIRF, std::vector<std::string>
     return;
 }
 
-/**
- * gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::MatrixXd& Dsol, const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC)
- * 
- * Use Sims (2002) method for solving a linear dynamic general equilibrium model
- * 
- * Model has the following form: \Gamma_0 x_t = C + \Gamma_1 x_t-1 + \Psi z_t + \Pi \eta_t
- * 
- * where...
- *  x_t is a vector of variables
- *  z_t is a vector of exogenous shocks
- *  \eta_t is a vector of endogenous expectation errors: \eta_t = x_t - E_t-1 x_t
- * 
- *  C is a vector of constants
- *  \Gamma_0 and \Gamma_1 are square matrices of coefficients, dimensions nvar x nvar
- *  \Psi is a matrix, dimension nvar x nshocks
- *  \Pi is a matrix, dimension nvar x nendo
- * 
- * The solution is given as,
- * 
- * x_t = D_sol + G_sol x_t-1 + M_sol z_t
- *   
- * The method includes a return value for existence and uniqueness of solution:
- *   Return value > 0: Indeterminacy, there are `return_value` number of loose endogenous variables, ignore outputs for D_sol, G_sol, and M_sol
- *   Return value = 0: Unique solution is found. There are 0 loose endogenous variables.
- *   Return value = -1: No solution exists.
- * 
- * @param mdGsol (output) Eigen::MatrixXd with the solution matrix G_sol
- * @param mdMsol (output) Eigen::MatrixXd with the solution matrix M_sol
- * @param vcDsol (output) Eigen::VectorXd with the solution vector D_sol
- * 
- * @param mdGamma0 (input) const Eigen::MatrixXd with the coefficient matrix \Gamma_0
- * @param mdGamma1 (input) const Eigen::MatrixXd with the coefficient matrix \Gamma_1
- * @param mdPsi (input) const Eigen::MatrixXd with the coefficient matrix \Psi
- * @param mdPi (input) const Eigen::MatrixXd with the coefficient matrix \Pi
- * @param vdC (input) const Eigen::VectorXd with the constant vector C
- * 
- * @return Integer equal to the number of loose parameters. =0 when there is a unique solution, =-1 for no solution, >0 for indeterminacy
- * 
-*/
+// Solve the linear DSGE model using the Sims (2002) QZ method. Returns 0 for a unique solution,
+// -1 for no solution, or a positive integer for the number of loose endogenous variables (indeterminacy).
 int gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vdDsol, const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC) {
+    double tol = 1e-10; // Tolerance for checking rank and indeterminacy
     int nvar = mdGamma0.rows();
     int nshocks = mdPsi.cols();
     int nendo = mdPi.cols();
@@ -269,6 +185,32 @@ int gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vd
     int nstable = qz(mcdQ, mcdZ, mcdS, mcdT, vdLambda, mdGamma0, mdGamma1);
     int nunstable = nvar - nstable;
 
+    // Partition Q^H by rows: bottom nunstable rows correspond to unstable eigenvalues
+    Eigen::MatrixXcd mcdQt   = mcdQ.adjoint();
+    Eigen::MatrixXcd mcdQ2   = mcdQt.block(nstable, 0, nunstable, nvar);
+    Eigen::MatrixXcd mcdQ2Pi  = mcdQ2 * mcdPi;   // nunstable x nendo
+    Eigen::MatrixXcd mcdQ2Psi = mcdQ2 * mcdPsi;  // nunstable x nshocks
+
+    // SVD on Q2 * Pi
+    Eigen::JacobiSVD<Eigen::MatrixXcd> svd(mcdQ2Pi, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::MatrixXcd U = svd.matrixU();   // nunstable x nunstable
+    Eigen::MatrixXcd V = svd.matrixV();   // nendo x nendo
+    Eigen::VectorXd s = svd.singularValues();  // min(nunstable, nendo) singular values    
+    int nrank = (s.array() > tol).count();
+
+    if(nrank < nunstable) {
+        bool indeterminacy = check_colspace(mcdQ2Pi, mcdQ2Psi);
+        if (indeterminacy) {   
+            return nunstable - nrank; // Indeterminacy, return number of loose endogenous variables
+        } else {
+            return -1; // No solution
+        }
+    }
+
+
+
+
+    /* I think all this is wrong 
     Eigen::MatrixXcd mcdQt = mcdQ.adjoint();
     Eigen::MatrixXcd mcdPsi_tilde = mcdQt * mcdPsi;
     Eigen::MatrixXcd mcdPi_tilde = mcdQt * mcdPi;
@@ -348,6 +290,7 @@ int gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vd
     // vdDsol = vcdDsol.real();
 
     return 0;
+    */
 }
 
 int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vdDsol, 
@@ -452,41 +395,8 @@ int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::Ve
 }
 
 
-/**
- * checksys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::MatrixXd& Dsol, const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC)
- * 
- * Use Sims (2002) method for checking for a solution to a linear dynamic general equilibrium model 
- * 
- * Model has the following form: \Gamma_0 x_t = C + \Gamma_1 x_t-1 + \Psi z_t + \Pi \eta_t
- * 
- * where...
- *  x_t is a vector of variables
- *  z_t is a vector of exogenous shocks
- *  \eta_t is a vector of endogenous expectation errors: \eta_t = x_t - E_t-1 x_t
- * 
- *  C is a vector of constants
- *  \Gamma_0 and \Gamma_1 are square matrices of coefficients, dimensions nvar x nvar
- *  \Psi is a matrix, dimension nvar x nshocks
- *  \Pi is a matrix, dimension nvar x nendo
- * 
- * The solution is given as,
- * 
- * x_t = D_sol + G_sol x_t-1 + M_sol z_t
- *   
- * The method returns a value for existence and uniqueness of solution:
- *   Return value > 0: Indeterminacy, there are `return_value` number of loose endogenous variables, ignore outputs for D_sol, G_sol, and M_sol
- *   Return value = 0: Unique solution is found. There are 0 loose endogenous variables.
- *   Return value = -1: No solution exists.
- * 
- * @param mdGamma0 (input) const Eigen::MatrixXd with the coefficient matrix \Gamma_0
- * @param mdGamma1 (input) const Eigen::MatrixXd with the coefficient matrix \Gamma_1
- * @param mdPsi (input) const Eigen::MatrixXd with the coefficient matrix \Psi
- * @param mdPi (input) const Eigen::MatrixXd with the coefficient matrix \Pi
- * @param vdC (input) const Eigen::VectorXd with the constant vector C
- * 
- * @return Integer equal to the number of loose parameters. =0 when there is a unique solution, =-1 for no solution, >0 for indeterminacy
- * 
-*/
+// Check existence and uniqueness of the DSGE solution without computing G, M, or D.
+// Returns 0 (unique), -1 (no solution), or a positive integer (number of loose endogenous variables).
 int checksys(const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC) {
     int nvar = mdGamma0.rows();
     int nshocks = mdPsi.cols();
@@ -538,4 +448,34 @@ int checksys(const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, c
     } 
 
     return nloose;
+}
+
+// Check whether col(B) ⊆ col(A) using SVD of A; returns true if the projection of B onto the left null space of A is ~zero.
+bool check_colspace(const Eigen::MatrixXcd& A, const Eigen::MatrixXcd& B, double tol) {
+
+    // Compute SVD of A: A = U * S * V^H
+    Eigen::JacobiSVD<Eigen::MatrixXcd> svd(A, Eigen::ComputeFullU);
+    Eigen::MatrixXcd U = svd.matrixU();
+    Eigen::VectorXd singularValues = svd.singularValues();
+
+    // Determine the rank of A: number of singular values above tolerance
+    int rank = 0;
+    for(int i = 0; i < singularValues.size(); i++) {
+        if(singularValues(i) > tol) rank++;
+    }
+
+    // If A is full rank, col(B) is trivially a subset of col(A)
+    if(rank == A.rows()) return true;
+
+    // U_2: left singular vectors spanning the left null space of A (columns beyond `rank`)
+    // These are orthogonal to col(A), so col(B) ⊆ col(A) iff U_2^H * B ≈ 0
+    Eigen::MatrixXcd U_2 = U.rightCols(U.cols() - rank);
+
+    return (U_2.adjoint() * B).norm() < tol;
+}
+
+// Overload with default tolerance of 1e-10.
+bool check_colspace(const Eigen::MatrixXcd& A, const Eigen::MatrixXcd& B) {
+    double tol = 1e-10;
+    return check_colspace(A, B, tol);
 }

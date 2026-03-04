@@ -35,59 +35,108 @@
 #include <gsl/gsl_multiroots.h>
 #include <functional>
 
-// The parameter to pass to the GSL wrapped function. It includes both the user-provided function and the user-provided parameters
+/**
+ * @brief Parameters passed to the GSL-wrapped root-finding function.
+ */
 struct multiroot_function_data {
-    // func is the function to be solved. This is a function from R^n to R^n for which to find the zeros
-    std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void*)> func;
-
-   // jacfunc is the Jacobian of func
-    std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void*)> jacfunc;
-
-    // This a generic object of parameters to pass to func()
-    const void* params; 
+    std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void*)> func;    ///< Function \f$ f : \mathbb{R}^n \to \mathbb{R}^n \f$ whose zeros are sought
+    std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void*)> jacfunc; ///< Jacobian of func (optional; unused if not provided)
+    const void* params; ///< User-supplied parameter pointer passed through to func()
 };
 
-// A function to set up a multiroot_function_data struct, including function, Jacobian, and parameters
+/**
+ * @brief Construct a multiroot_function_data struct with a function, Jacobian, and parameters.
+ *
+ * @param func     Function whose zeros are sought
+ * @param jacfunc  Jacobian of func
+ * @param params   User-supplied parameter pointer
+ * @return Populated multiroot_function_data
+ */
 multiroot_function_data setup_multiroot_function_data(
     std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
     std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
     const void* params);
 
-// A function to set up a multiroot_function_data struct, including function and parameters
+/**
+ * @brief Construct a multiroot_function_data struct with a function and parameters (no Jacobian).
+ *
+ * @param func   Function whose zeros are sought
+ * @param params User-supplied parameter pointer
+ * @return Populated multiroot_function_data
+ */
 multiroot_function_data setup_multiroot_function_data(
     std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
     const void* params);
 
-// GSL wrapper for the user-defined function to minimize
+/**
+ * @brief GSL-compatible wrapper that evaluates the user-defined function.
+ *
+ * @param gsl_x  Current point as a gsl_vector
+ * @param data   Pointer to a multiroot_function_data struct
+ * @param gsl_f  Output: function value at gsl_x
+ * @return GSL_SUCCESS on success
+ */
 int multiroot_gsl_f(const gsl_vector* gsl_x, void* data, gsl_vector* gsl_f);
 
-// GSL wrapper for the Jacobian of the function. It does not currently do anything
+/**
+ * @brief GSL-compatible wrapper for the Jacobian (currently a no-op placeholder).
+ *
+ * @param gsl_x Current point as a gsl_vector
+ * @param data  Pointer to a multiroot_function_data struct
+ * @param J     Output: Jacobian matrix
+ * @return GSL_SUCCESS on success
+ */
 int multiroot_gsl_df(const gsl_vector* gsl_x, void* data, gsl_matrix* J);
-// Combined GSL wrapper for the user-defined function and the Jacobian
+
+/**
+ * @brief GSL-compatible wrapper that evaluates both the function and its Jacobian.
+ *
+ * @param x    Current point as a gsl_vector
+ * @param data Pointer to a multiroot_function_data struct
+ * @param f    Output: function value at x
+ * @param J    Output: Jacobian matrix at x
+ * @return GSL_SUCCESS on success
+ */
 int multiroot_gsl_fdf(const gsl_vector* x, void* data, gsl_vector* f, gsl_matrix* J);
 
-// Here are all the versions of the dml_multiroot() function
-
-// Multiroot finder with no value for verbose
+/**
+ * @brief Find zeros of a multivariate function using GSL (verbose defaults to false).
+ *
+ * @param initial_guess Starting point for the search
+ * @param func          Function \f$ f(x, \text{params}) \f$ whose zeros are sought
+ * @param params        User-supplied parameter pointer
+ * @return Vector at which f is zero
+ */
 Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
                               const void* params);
 
-
-// Multiroot finder with option for verbosity
+/**
+ * @brief Find zeros of a multivariate function with optional verbose output.
+ *
+ * @param initial_guess Starting point for the search
+ * @param func          Function \f$ f(x, \text{params}) \f$ whose zeros are sought
+ * @param params        User-supplied parameter pointer
+ * @param verbose       If true, print iteration progress to stdout
+ * @return Vector at which f is zero
+ */
 Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
                               std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
                               const void* params, bool verbose);
 
-// Multiroot finder with Jacobian
+/**
+ * @brief Find zeros of a multivariate function using a user-supplied Jacobian.
+ *
+ * @param initial_guess Starting point for the search
+ * @param func          Function \f$ f(x, \text{params}) \f$ whose zeros are sought
+ * @param jacfunc       Jacobian of func
+ * @param params        User-supplied parameter pointer
+ * @param verbose       If true, print iteration progress to stdout
+ * @return Vector at which f is zero
+ */
 Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
         std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
         std::function<Eigen::MatrixXd(const Eigen::VectorXd&, const void* data)> jacfunc,
         const void* params, bool verbose);
-
-// Multiroot finder
-Eigen::VectorXd dml_multiroot(const Eigen::VectorXd& initial_guess, 
-                              std::function<Eigen::VectorXd(const Eigen::VectorXd&, const void* data)> func,
-                              const void* params, bool verbose);
 
 #endif

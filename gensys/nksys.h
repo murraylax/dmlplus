@@ -33,7 +33,12 @@
 
 #include <Eigen/Dense>
 
-// Indices into the vector for the state variables
+/**
+ * @brief Indices into the state variable vector \f$ x_t \f$.
+ *
+ * Use these enumerators to index into vectors and matrices by named variable
+ * rather than by raw integer position.
+ */
 enum var {
     i_cO,
     i_cR,
@@ -89,7 +94,9 @@ enum var {
     nvar
 };
 
-// Indices for endogenous expectation errors
+/**
+ * @brief Indices for the endogenous expectation error vector \f$ \eta_t \f$.
+ */
 enum exp {
     i_a,
     i_Pi,
@@ -102,7 +109,9 @@ enum exp {
     nexp
 }
 
-// Indices for exogenous shocks
+/**
+ * @brief Indices for the exogenous shock vector \f$ z_t \f$.
+ */
 enum shock {
     i_shock_a,
     i_shock_uD,
