@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 James M. Murray
+ * Copyright 2024 James M. Murray
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,12 +30,232 @@
 */
 
 #include "utils.h"
-
 #include <sstream>
+#include <fstream>
 #include <iomanip>
+#include <iostream>
+#include <chrono>
 
 using namespace std;
 using namespace Eigen;
+
+/**
+ * write_eigen_csv(Eigen::MatrixXd& mat, std::string& filepath)
+ * 
+ * Write an Eigen::MatrixXd to a csv file
+ * 
+ * @param mat Eigem::MatrixXd to write to file
+ * @param filepath String that contains the path and filename to write to
+ */
+void write_eigen_csv(const Eigen::MatrixXd& mat, const std::string& filepath) {
+    std::ofstream csvfile(filepath);
+    size_t nvar = mat.cols();
+    size_t nrow = mat.rows();
+
+    for(int r=0; r<nrow; r++) {
+        for(int i=0; i<nvar; i++) {
+            csvfile << mat(r,i);
+            if(i==(nvar-1)) {
+                csvfile << "\n";
+            } else {
+                csvfile << ", ";
+            }
+        }
+    }
+
+    csvfile.close();
+}
+
+/**
+ * write_eigen_csv(Eigen::VectorXd& vec, std::string& filepath)
+ * 
+ * Write an Eigen::VectorXd to a csv file
+ * 
+ * @param vec Eigen::VectorXd to write to file
+ * @param filepath String that contains the path and filename to write to
+ * 
+ */
+void write_eigen_csv(const Eigen::VectorXd& vec, const std::string& filepath) {
+    std::ofstream csvfile(filepath);
+
+    size_t nrow = vec.size();
+
+    for(int r=0; r<nrow; r++) {
+        csvfile << vec(r) << "\n";
+    }
+
+    csvfile.close();
+}
+
+/**
+ * write_eigen_csv(Eigen::VectorXd& vec, std::string& varname, std::string& filepath)
+ * 
+ * Write an Eigen::VectorXd to a file, with a variable name at the top
+ * 
+ * @param vec Eigen::VectorXd to write to file
+ * @param varname String that is the variable name for the vector
+ * @param filepath String that contains the path and filename to write to
+ */
+void write_eigen_csv(Eigen::VectorXd& vec, std::string& varname, std::string& filepath) {
+    std::ofstream csvfile(filepath);
+
+    size_t nrow = vec.rows();
+
+    csvfile << varname << "\n";
+    for(int r=0; r<nrow; r++) {
+        csvfile << vec(r) << "\n";
+    }
+
+    csvfile.close();
+}
+
+/**
+ * write_eigen_csv(Eigen::MatrixXd& mat, std::string& filepath)
+ * 
+ * Write an Eigen::MatrixXd to a csv file, including variable names
+ * 
+ * @param mat Eigen::MatrixXd to write to file
+ * @param varnames Vector of strings for the variable names, must have the same size as the number of columns of mat
+ * @param filepath String that contains the path and filename to write to
+ */
+void write_eigen_csv(Eigen::MatrixXd& mat, std::vector<std::string>& varnames, std::string& filepath) {
+    std::ofstream csvfile(filepath);
+    size_t nvar = mat.cols();
+    size_t nrow = mat.rows();
+    for(int i=0; i<nvar; i++) {
+        csvfile << "\"" << varnames[i] << "\"";
+        if(i==(nvar-1)) {
+            csvfile << std::endl;
+        } else {
+            csvfile << ", ";
+        }
+    }
+    for(int r=0; r<nrow; r++) {
+        for(int i=0; i<nvar; i++) {
+            csvfile << mat(r,i);
+            if(i==(nvar-1)) {
+                csvfile << std::endl;
+            } else {
+                csvfile << ", ";
+            }
+        }
+    }
+
+    csvfile.close();
+}
+
+// Function to start the timer and return the start time point
+std::chrono::time_point<std::chrono::steady_clock> start_timer() {
+    return std::chrono::steady_clock::now();
+}
+
+// Function to stop the timer, calculate the elapsed time, and print it
+void stop_timer(const std::chrono::time_point<std::chrono::steady_clock>& start_time) {
+    auto end_time = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    
+    int minutes = duration.count() / 60000;
+    int seconds = (duration.count() % 60000) / 1000;
+    int milliseconds = duration.count() % 1000;
+
+    std::cout << "Elapsed time: " << minutes << " minute(s), "
+              << seconds << " second(s), and "
+              << milliseconds << " millisecond(s)." << std::endl;
+
+    return;
+}
+
+/**
+ * copy_vector_to_gsl(const Eigen::VectorXd& eigen_input, gsl_vector* gsl_output)
+ * 
+ * Copy the elements of an Eigen::VectorXd to a gsl_vector* 
+ * 
+ * @param gsl_output (Output) The elements of this gsl_vector* will be overwritten with elements of the `eigen_input` parameter
+ * @param eigen_input This is a const Eigen::VectorXd whose elements will be copied to the `gsl_output` parameter
+*/
+void copy_vector_to_gsl(gsl_vector* gsl_output, const Eigen::VectorXd& eigen_input) {
+    int eigen_size = eigen_input.size();
+    int gsl_size = gsl_output->size;
+    if(eigen_size != gsl_size) {
+        throw std::invalid_argument("Size mismatch: Eigen::VectorXd and gsl_vector must have the same size.");
+    }
+
+    for(int i=0; i<eigen_input.size(); i++) {
+        gsl_vector_set(gsl_output, i, eigen_input[i]);
+    }
+    return;
+}
+
+/**
+ * copy_gsl_to_vector(Eigen::VectorXd& eigen_output, const gsl_vector* gsl_input)
+ * 
+ * Copy the elements of a gsl_vector* to an Eigen::VectorXd  
+ * 
+ * @param eigen_output (Output) The elements of this Eigen::VectorXd* vector will be overwritten with elements of the `gsl_input` parameter
+ * @param gsl_input This is a const gsl_vector* whose elements will be copied to the `eigen_output` parameter
+*/
+void copy_gsl_to_vector(Eigen::VectorXd& eigen_output, const gsl_vector* gsl_input) {
+    int eigen_size = eigen_output.size();
+    int gsl_size = gsl_input->size;
+    if(eigen_size != gsl_size) {
+        throw std::invalid_argument("Size mismatch: Eigen::VectorXd and gsl_vector must have the same size.");
+    }
+
+    for(int i=0; i<eigen_output.size(); i++) {
+        eigen_output[i] = gsl_vector_get(gsl_input, i);
+    }
+    return;
+}
+
+/**
+ * copy_matrix_to_gsl(const Eigen::MatrixXd& eigen_input, gsl_matrix* gsl_output)
+ * 
+ * Copy the elements of an Eigen::MatrixXd to a gsl_matrix* 
+ * 
+ * @param gsl_output (Output) The elements of this gsl_matrix* will be overwritten with elements of the `eigen_input` parameter
+ * @param eigen_input This is a const Eigen::MatrixXd whose elements will be copied to the `gsl_output` parameter
+*/
+void copy_matrix_to_gsl(gsl_matrix* gsl_output, const Eigen::MatrixXd& eigen_input) {
+    int eigen_nrow = eigen_input.rows();
+    int eigen_ncol = eigen_input.cols();
+    int gsl_nrow = gsl_output->size1;
+    int gsl_ncol = gsl_output->size2;
+    if(eigen_nrow != gsl_nrow || eigen_ncol != gsl_ncol) {
+        throw std::invalid_argument("Size mismatch: Eigen::MatrixXd and gsl_matrix* must have the same dimensions.");
+    }
+
+    for(int i = 0; i < eigen_nrow; i++) {
+        for(int j = 0; j < eigen_ncol; j++) {
+            gsl_matrix_set(gsl_output, i, j, eigen_input(i,j));
+        }
+    }
+    return;
+}
+
+/**
+ * copy_matrix_to_gsl(const Eigen::MatrixXd& eigen_input, gsl_matrix* gsl_output)
+ * 
+ * Copy the elements of an Eigen::MatrixXd to a gsl_matrix* 
+ * 
+ * @param eigen_output (Output) This is a Eigen::MatrixXd whose elements will be overwritten with elements of the `gsl_intput` parameter
+ * @param gsl_input This is a const gsl_matrix* whose elements will be copied to the `eigen_output` parameter
+*/
+void copy_gsl_to_matrix(Eigen::MatrixXd& eigen_output, const gsl_matrix* gsl_input) {
+    int eigen_nrow = eigen_output.rows();
+    int eigen_ncol = eigen_output.cols();
+    int gsl_nrow = gsl_input->size1;
+    int gsl_ncol = gsl_input->size2;
+    if(eigen_nrow != gsl_nrow || eigen_ncol != gsl_ncol) {
+        throw std::invalid_argument("Size mismatch: Eigen::MatrixXd and gsl_matrix* must have the same dimensions.");
+    }
+
+    for(int i = 0; i < eigen_nrow; i++) {
+        for(int j = 0; j < eigen_ncol; j++) {
+            eigen_output(i,j) = gsl_matrix_get(gsl_input, i, j);
+        }
+    }
+    return;
+}
 
 /**
  * copy_matrix_to_lapack_complex(lapack_complex_double* lapackMatrix, const Eigen::MatrixXd& matrix)

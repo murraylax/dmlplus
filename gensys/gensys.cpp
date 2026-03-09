@@ -164,17 +164,8 @@ void write_irf_to_csvfile(const Eigen::MatrixXd& mdIRF, std::vector<std::string>
 // Solve the linear DSGE model using the Sims (2002) QZ method. Returns 0 for a unique solution,
 // -1 for no solution, or a positive integer for the number of loose endogenous variables (indeterminacy).
 int gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vdDsol, const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC) {
-    double tol = 1e-10; // Tolerance for checking rank and indeterminacy
-    int nvar = mdGamma0.rows();
-    int nshocks = mdPsi.cols();
-    int nendo = mdPi.cols();
 
-    // Convert input matrices to complex matricies
-    Eigen::MatrixXcd mcdGamma0 = mdGamma0.cast<std::complex<double>>();
-    Eigen::MatrixXcd mcdGamma1 = mdGamma1.cast<std::complex<double>>();
-    Eigen::MatrixXcd mcdPsi = mdPsi.cast<std::complex<double>>();
-    Eigen::MatrixXcd mcdPi = mdPi.cast<std::complex<double>>();
-    Eigen::VectorXcd vcdC = vdC.cast<std::complex<double>>();
+    int nvar = mdGamma0.rows();
 
     Eigen::MatrixXcd mcdS(nvar,nvar);
     Eigen::MatrixXcd mcdT(nvar,nvar);
@@ -182,115 +173,10 @@ int gensys(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vd
     Eigen::MatrixXcd mcdZ(nvar,nvar);
     Eigen::VectorXd vdLambda(nvar);
 
-    int nstable = qz(mcdQ, mcdZ, mcdS, mcdT, vdLambda, mdGamma0, mdGamma1);
-    int nunstable = nvar - nstable;
+    int nunstable = -1;
+    int nstable = gensys_qzdetails(mdGsol, mdMsol, vdDsol, mcdS, mcdT, mcdQ, mcdZ, vdLambda, nunstable, mdGamma0, mdGamma1, mdPsi, mdPi, vdC);
 
-    // Partition Q^H by rows: bottom nunstable rows correspond to unstable eigenvalues
-    Eigen::MatrixXcd mcdQt   = mcdQ.adjoint();
-    Eigen::MatrixXcd mcdQ2   = mcdQt.block(nstable, 0, nunstable, nvar);
-    Eigen::MatrixXcd mcdQ2Pi  = mcdQ2 * mcdPi;   // nunstable x nendo
-    Eigen::MatrixXcd mcdQ2Psi = mcdQ2 * mcdPsi;  // nunstable x nshocks
-
-    // SVD on Q2 * Pi
-    Eigen::JacobiSVD<Eigen::MatrixXcd> svd(mcdQ2Pi, Eigen::ComputeFullU | Eigen::ComputeFullV);
-    Eigen::MatrixXcd U = svd.matrixU();   // nunstable x nunstable
-    Eigen::MatrixXcd V = svd.matrixV();   // nendo x nendo
-    Eigen::VectorXd s = svd.singularValues();  // min(nunstable, nendo) singular values    
-    int nrank = (s.array() > tol).count();
-
-    if(nrank < nunstable) {
-        bool indeterminacy = check_colspace(mcdQ2Pi, mcdQ2Psi);
-        if (indeterminacy) {   
-            return nunstable - nrank; // Indeterminacy, return number of loose endogenous variables
-        } else {
-            return -1; // No solution
-        }
-    }
-
-
-
-
-    /* I think all this is wrong 
-    Eigen::MatrixXcd mcdQt = mcdQ.adjoint();
-    Eigen::MatrixXcd mcdPsi_tilde = mcdQt * mcdPsi;
-    Eigen::MatrixXcd mcdPi_tilde = mcdQt * mcdPi;
-    Eigen::VectorXcd vcdC_tilde = mcdQt * vcdC;
-
-    Eigen::MatrixXcd mcdS11 = mcdS.block(0,0,nstable,nstable);
-    Eigen::MatrixXcd mcdS12 = mcdS.block(0,nstable,nstable,nunstable);
-    Eigen::MatrixXcd mcdS22 = mcdS.block(nstable,nstable,nunstable,nunstable);
-    Eigen::MatrixXcd mcdT11 = mcdT.block(0,0,nstable,nstable);
-    Eigen::MatrixXcd mcdT12 = mcdT.block(0,nstable,nstable,nunstable);
-    Eigen::MatrixXcd mcdT22 = mcdT.block(nstable,nstable,nunstable,nunstable);
-    Eigen::MatrixXcd mcdPsi1 = mcdPsi_tilde.block(0,0,nstable,nshocks);
-    Eigen::MatrixXcd mcdPsi2 = mcdPsi_tilde.block(nstable,0,nunstable,nshocks);
-    Eigen::MatrixXcd mcdPi1 = mcdPi_tilde.block(0,0,nstable,nendo);
-    Eigen::MatrixXcd mcdPi2 = mcdPi_tilde.block(nstable,0,nunstable,nendo);
-    Eigen::VectorXcd vcdC1 = vcdC_tilde.segment(0,nstable);
-    Eigen::VectorXcd vcdC2 = vcdC_tilde.segment(nstable, nunstable);
-    Eigen::MatrixXcd mcdZ1 = mcdZ.block(0,0,nvar,nstable);
-    Eigen::MatrixXcd mcdZ2 = mcdZ.block(0,nstable,nvar,nunstable);
-
-    // Check the rank of mdPi2. For a unique solution, it should be of rank nendo
-    int nrank_pi2 = Eigen::FullPivLU<Eigen::MatrixXcd>(mcdPi2).rank();
-    int nloose = 0;
-
-    // Check if there is either indeterminacy or no solution, and if so, figure out which, and get out of this function.
-    if(nrank_pi2 != nendo) { 
-        // Make an augmented matrix [mcdPi2 mcdPsi2 vcdC2]
-        Eigen::MatrixXcd mcdCombined(nunstable, nendo+nshocks+1);
-        mcdCombined.block(0, 0, nunstable, nendo) = mcdPi2;
-        mcdCombined.col(nendo) = vcdC2;
-        mcdCombined.block(0, nendo+1, nunstable, nshocks) = mcdPsi2;
-        int nrank_combined = Eigen::FullPivLU<Eigen::MatrixXcd>(mcdCombined).rank();
-        if(nrank_combined > nrank_pi2) {
-            nloose = -1;
-        } else {
-            nloose = nendo - nrank_pi2;
-        }
-        if(nloose<0) nloose = -1;
-        return nloose; // Leave the function, nothing more to do here
-    } 
-
-    // Forward solution for unstable block: phi_z = -Pi2^{-1} Psi2
-    Eigen::MatrixXcd mcdPhi_z = -mcdPi2.colPivHouseholderQr().solve(mcdPsi2);
-
-    // Forward solution for unstable block constant: phi_c = (S22 - T22)^{-1} C2
-    Eigen::MatrixXcd mcdS22_minus_T22 = mcdS22 - mcdT22;
-    Eigen::VectorXcd vcdPhi_c = mcdS22_minus_T22.colPivHouseholderQr().solve(vcdC2);
-
-    // G = Z_1 S_{11}^{-1} (T_{11} Z_1' + T_{12} Z_2')
-    Eigen::MatrixXcd mcdGsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve(mcdT11 * mcdZ1.adjoint() + mcdT12 * mcdZ2.adjoint());
-
-    // M = Z_1 S_{11}^{-1} (Psi1 - S12 * phi_z - Pi1 * Pi2^{-1} * Psi2) + Z_2 * phi_z
-    Eigen::MatrixXcd mcdMsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( 
-        mcdPsi1 - mcdS12 * mcdPhi_z - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(mcdPsi2) ) 
-        + mcdZ2 * mcdPhi_z;
-
-    // D = Z_1 * S_{11}^{-1} (C1 - S12 * phi_c - Pi1 * Pi2^{-1} * C2) + Z_2 * phi_c
-    Eigen::VectorXcd vcdDsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( 
-        vcdC1 - mcdS12 * vcdPhi_c - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(vcdC2) ) 
-        + mcdZ2 * vcdPhi_c;
-
-    mdGsol = mcdGsol.real();
-    mdMsol = mcdMsol.real();
-    vdDsol = vcdDsol.real();
-
-    // // G = Z_1 S_{11}^{-1} T_{11} Z_1' 
-    // Eigen::MatrixXcd mcdGsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve(mcdT11 * mcdZ1.adjoint());
-
-    // // M = Z_1 S_{11}^{-1} ( \tilde{\Psi}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{\Psi}_2)
-    // Eigen::MatrixXcd mcdMsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( mcdPsi1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(mcdPsi2) );
-
-    // // D = Z_1 * S_{11}^{-1} (  \tilde{C}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{C}_2)
-    // Eigen::VectorXcd vcdDsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( vcdC1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(vcdC2)) ;
-
-    // mdGsol = mcdGsol.real();
-    // mdMsol = mcdMsol.real();
-    // vdDsol = vcdDsol.real();
-
-    return 0;
-    */
+    return nstable;
 }
 
 int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::VectorXd& vdDsol, 
@@ -299,6 +185,7 @@ int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::Ve
      const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, 
      const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC) {
 
+    double tol = 1e-10; // Tolerance for checking rank and indeterminacy
     int nvar = mdGamma0.rows();
     int nshocks = mdPsi.cols();
     int nendo = mdPi.cols();
@@ -313,94 +200,82 @@ int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::Ve
     int nstable = qz(mcdQ, mcdZ, mcdS, mcdT, vdLambda, mdGamma0, mdGamma1);
     nunstable = nvar - nstable;
 
-    Eigen::MatrixXcd mcdQt = mcdQ.adjoint();
-    Eigen::MatrixXcd mcdPsi_tilde = mcdQt * mcdPsi;
-    Eigen::MatrixXcd mcdPi_tilde = mcdQt * mcdPi;
-    Eigen::VectorXcd vcdC_tilde = mcdQt * vcdC;
+    // Partition Q^H by rows: bottom nunstable rows correspond to unstable eigenvalues
+    Eigen::MatrixXcd mcdQH   = mcdQ.adjoint();
+    Eigen::MatrixXcd mcdQH2   = mcdQH.block(nstable, 0, nunstable, nvar);
+    Eigen::MatrixXcd mcdQH2Pi  = mcdQH2 * mcdPi;   // nunstable x nendo
+    Eigen::MatrixXcd mcdQH2Psi = mcdQH2 * mcdPsi;  // nunstable x nshocks
 
-    Eigen::MatrixXcd mcdS11 = mcdS.block(0,0,nstable,nstable);
-    Eigen::MatrixXcd mcdS12 = mcdS.block(0,nstable,nstable,nunstable);
-    Eigen::MatrixXcd mcdS22 = mcdS.block(nstable,nstable,nunstable,nunstable);
-    Eigen::MatrixXcd mcdT11 = mcdT.block(0,0,nstable,nstable);
-    Eigen::MatrixXcd mcdT12 = mcdT.block(0,nstable,nstable,nunstable);
-    Eigen::MatrixXcd mcdT22 = mcdT.block(nstable,nstable,nunstable,nunstable);
-    Eigen::MatrixXcd mcdPsi1 = mcdPsi_tilde.block(0,0,nstable,nshocks);
-    Eigen::MatrixXcd mcdPsi2 = mcdPsi_tilde.block(nstable,0,nunstable,nshocks);
-    Eigen::MatrixXcd mcdPi1 = mcdPi_tilde.block(0,0,nstable,nendo);
-    Eigen::MatrixXcd mcdPi2 = mcdPi_tilde.block(nstable,0,nunstable,nendo);
-    Eigen::VectorXcd vcdC1 = vcdC_tilde.segment(0,nstable);
-    Eigen::VectorXcd vcdC2 = vcdC_tilde.segment(nstable, nunstable);
-    Eigen::MatrixXcd mcdZ1 = mcdZ.block(0,0,nvar,nstable);
-    Eigen::MatrixXcd mcdZ2 = mcdZ.block(0,nstable,nvar,nunstable);
+    // SVD on Q2 * Pi
+    Eigen::JacobiSVD<Eigen::MatrixXcd> svd(mcdQH2Pi, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::MatrixXcd U = svd.matrixU();   // nunstable x nunstable
+    Eigen::MatrixXcd V = svd.matrixV();   // nendo x nendo
+    Eigen::VectorXd s = svd.singularValues();  // min(nunstable, nendo) singular values    
+    int nrank = (s.array() > tol).count();
 
-    // Check the rank of mdPi2. For a unique solution, it should be of rank nendo
-    int nrank_pi2 = Eigen::FullPivLU<Eigen::MatrixXcd>(mcdPi2).rank();
-    int nloose = 0;
-
-    // Check if there is either indeterminacy or no solution, and if so, figure out which, and get out of this function.
-    if(nrank_pi2 != nendo) { 
-        // Make an augmented matrix [mcdPi2 mcdPsi2 vcdC2]
-        Eigen::MatrixXcd mcdCombined(nunstable, nendo+nshocks+1);
-        mcdCombined.block(0, 0, nunstable, nendo) = mcdPi2;
-        mcdCombined.col(nendo) = vcdC2;
-        mcdCombined.block(0, nendo+1, nunstable, nshocks) = mcdPsi2;
-        int nrank_combined = Eigen::FullPivLU<Eigen::MatrixXcd>(mcdCombined).rank();
-        if(nrank_combined > nrank_pi2) {
-            nloose = -1;
+    if(nrank < nendo) {
+        bool indeterminacy = check_colspace(mcdQH2Pi, mcdQH2Psi);
+        if (indeterminacy) {   
+            return nendo - nrank; // Indeterminacy, return number of loose endogenous variables
         } else {
-            nloose = nendo - nrank_pi2;
+            return -1; // No solution
         }
-        if(nloose<0) nloose = -1;
-        return nloose; // Leave the function, nothing more to do here
-    } 
+    }
 
-    // Forward solution for unstable block: phi_z = -Pi2^{-1} Psi2
-    Eigen::MatrixXcd mcdPhi_z = -mcdPi2.colPivHouseholderQr().solve(mcdPsi2);
+    Eigen::MatrixXcd mcdZ1 = mcdZ.block(0, 0, nvar, nstable);
+    Eigen::MatrixXcd mcdS11 = mcdS.block(0, 0, nstable, nstable);
+    Eigen::MatrixXcd mcdT11 = mcdT.block(0, 0, nstable, nstable);
+    Eigen::MatrixXcd mcdQH1 = mcdQH.block(0, 0, nstable, nvar);
+    Eigen::MatrixXcd mcdV1 = V.block(0, 0, nendo, nendo);
 
-    // Forward solution for unstable block constant: phi_c = (S22 - T22)^{-1} C2
-    Eigen::MatrixXcd mcdS22_minus_T22 = mcdS22 - mcdT22;
-    Eigen::VectorXcd vcdPhi_c = mcdS22_minus_T22.colPivHouseholderQr().solve(vcdC2);
+    // Solution for G
+    Eigen::MatrixXcd mcdS11_pinv = mcdS11.completeOrthogonalDecomposition().pseudoInverse();
+    Eigen::MatrixXcd mcdG = mcdZ1 * mcdS11_pinv * mcdT11 * mcdZ1.adjoint();
 
-    // G = Z_1 S_{11}^{-1} (T_{11} Z_1' + T_{12} Z_2')
-    Eigen::MatrixXcd mcdGsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve(mcdT11 * mcdZ1.adjoint() + mcdT12 * mcdZ2.adjoint());
+    // Solution for M
+    Eigen::MatrixXcd mcdD_inv = s.cwiseInverse().asDiagonal();
+    Eigen::MatrixXcd mcdF = Eigen::MatrixXcd::Identity(nvar, nvar) - mcdPi * V * mcdD_inv * U.adjoint() * mcdQH2;
+    Eigen::MatrixXcd mcdM = mcdZ1 * mcdS11_pinv * mcdQH1 * mcdF * mcdPsi;
 
-    // M = Z_1 S_{11}^{-1} (Psi1 - S12 * phi_z - Pi1 * Pi2^{-1} * Psi2) + Z_2 * phi_z
-    Eigen::MatrixXcd mcdMsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( 
-        mcdPsi1 - mcdS12 * mcdPhi_z - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(mcdPsi2) ) 
-        + mcdZ2 * mcdPhi_z;
+    // Solution for D
+    Eigen::VectorXcd vcdD = mcdZ1 * mcdS11_pinv * mcdQH1 * vcdC;
 
-    // D = Z_1 * S_{11}^{-1} (C1 - S12 * phi_c - Pi1 * Pi2^{-1} * C2) + Z_2 * phi_c
-    Eigen::VectorXcd vcdDsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( 
-        vcdC1 - mcdS12 * vcdPhi_c - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(vcdC2) ) 
-        + mcdZ2 * vcdPhi_c;
+    mdGsol = mcdG.real();
+    mdMsol = mcdM.real();
+    vdDsol = vcdD.real();
 
-    mdGsol = mcdGsol.real();
-    mdMsol = mcdMsol.real();
-    vdDsol = vcdDsol.real();
+    // // Verification: Γ₀ * M - Ψ should be in the column space of Π
+    // Eigen::MatrixXcd mcdResidual = mcdGamma0 * mcdM - mcdPsi;
+    // Eigen::MatrixXcd mcdResidual_check = mcdResidual - mcdPi * (mcdPi.completeOrthogonalDecomposition().pseudoInverse() * mcdResidual);
+    // double shock_residual = mcdResidual_check.norm();
 
-    // // G = Z_1 S_{11}^{-1} T_{11} Z_1' 
-    // Eigen::MatrixXcd mcdGsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve(mcdT11 * mcdZ1.adjoint());
+    // // Verification: (Γ₀ * G - Γ₁) * Z₁ should be in the column space of Π
+    // Eigen::MatrixXcd mcdResidual_G = (mcdGamma0 * mcdG - mcdGamma1) * mcdZ1;
+    // Eigen::MatrixXcd mcdResidual_G_check = mcdResidual_G - mcdPi * (mcdPi.completeOrthogonalDecomposition().pseudoInverse() * mcdResidual_G);
+    // double G_residual = mcdResidual_G_check.norm();
 
-    // // M = Z_1 S_{11}^{-1} ( \tilde{\Psi}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{\Psi}_2)
-    // Eigen::MatrixXcd mcdMsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( mcdPsi1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(mcdPsi2) );
+    // std::cout << "Solution verification (should be ~0): " 
+    //         << "M check = " << shock_residual 
+    //         << ", G check = " << G_residual << std::endl;
 
-    // // D = Z_1 * S_{11}^{-1} (  \tilde{C}_1 - \tilde{\Pi_1} \tilde{\Pi}_2^{-1} \tilde{C}_2)
-    // Eigen::VectorXcd vcdDsol = mcdZ1 * mcdS11.colPivHouseholderQr().solve( vcdC1 - mcdPi1 * mcdPi2.colPivHouseholderQr().solve(vcdC2)) ;
-
-    // mdGsol = mcdGsol.real();
-    // mdMsol = mcdMsol.real();
-    // vdDsol = vcdDsol.real();
-
-    return nloose;
+    return 0;
 }
 
 
 // Check existence and uniqueness of the DSGE solution without computing G, M, or D.
 // Returns 0 (unique), -1 (no solution), or a positive integer (number of loose endogenous variables).
 int checksys(const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, const Eigen::MatrixXd& mdPsi, const Eigen::MatrixXd& mdPi, const Eigen::VectorXd& vdC) {
+
+    double tol = 1e-10; // Tolerance for checking rank and indeterminacy
     int nvar = mdGamma0.rows();
     int nshocks = mdPsi.cols();
     int nendo = mdPi.cols();
+
+    Eigen::MatrixXcd mcdS(nvar,nvar);
+    Eigen::MatrixXcd mcdT(nvar,nvar);
+    Eigen::MatrixXcd mcdQ(nvar,nvar);
+    Eigen::MatrixXcd mcdZ(nvar,nvar);
+    Eigen::VectorXd vdLambda(nvar);
 
     // Convert input matrices to complex matrices
     Eigen::MatrixXcd mcdGamma0 = mdGamma0.cast<std::complex<double>>();
@@ -409,45 +284,31 @@ int checksys(const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, c
     Eigen::MatrixXcd mcdPi = mdPi.cast<std::complex<double>>();
     Eigen::VectorXcd vcdC = vdC.cast<std::complex<double>>();
 
-    Eigen::MatrixXcd mcdS(nvar,nvar);
-    Eigen::MatrixXcd mcdT(nvar,nvar);
-    Eigen::MatrixXcd mcdQ(nvar,nvar);
-    Eigen::MatrixXcd mcdZ(nvar,nvar);
-    Eigen::VectorXd vdLambda(nvar);
-
     int nstable = qz(mcdQ, mcdZ, mcdS, mcdT, vdLambda, mdGamma0, mdGamma1);
     int nunstable = nvar - nstable;
 
-    Eigen::MatrixXcd mcdQt = mcdQ.adjoint();
-    Eigen::MatrixXcd mcdPsi_tilde = mcdQt * mcdPsi;
-    Eigen::MatrixXcd mcdPi_tilde = mcdQt * mcdPi;
-    Eigen::VectorXcd vcdC_tilde = mcdQt * vcdC;
+   // Partition Q^H by rows: bottom nunstable rows correspond to unstable eigenvalues
+    Eigen::MatrixXcd mcdQH   = mcdQ.adjoint();
+    Eigen::MatrixXcd mcdQH2   = mcdQH.block(nstable, 0, nunstable, nvar);
+    Eigen::MatrixXcd mcdQH2Pi  = mcdQH2 * mcdPi;   // nunstable x nendo
+    Eigen::MatrixXcd mcdQH2Psi = mcdQH2 * mcdPsi;  // nunstable x nshocks
 
-    Eigen::MatrixXcd mcdPsi2 = mcdPsi_tilde.block(nstable,0,nvar-nstable,nshocks);
-    Eigen::MatrixXcd mcdPi2 = mcdPi_tilde.block(nstable,0,nvar-nstable,nendo);
-    Eigen::VectorXcd vcdC2 = vcdC_tilde.segment(nstable, nunstable);
+    // SVD on Q2 * Pi
+    Eigen::JacobiSVD<Eigen::MatrixXcd> svd(mcdQH2Pi, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::MatrixXcd U = svd.matrixU();   // nunstable x nunstable
+    Eigen::MatrixXcd V = svd.matrixV();   // nendo x nendo
+    Eigen::VectorXd s = svd.singularValues();  // min(nunstable, nendo) singular values    
+    int nrank = (s.array() > tol).count();
 
-    // Check the rank of mdPi2. For a unique solution, it should be of rank nendo
-    int nrank_pi2 = Eigen::FullPivLU<Eigen::MatrixXcd>(mcdPi2).rank();
-    int nloose = 0;
-
-    // Check if there is either indeterminacy or no solution, and if so, figure out which, and get out of this function.
-    if(nrank_pi2 != nendo) { 
-        // Make an augmented matrix [mcdPi2 mcdPsi2 vcdC2]
-        Eigen::MatrixXcd mcdCombined(nunstable, nendo+nshocks+1);
-        mcdCombined.block(0, 0, nunstable, nendo) = mcdPi2;
-        mcdCombined.col(nendo) = vcdC2;
-        mcdCombined.block(0, nendo+1, nunstable, nshocks) = mcdPsi2;
-        int nrank_combined = Eigen::FullPivLU<Eigen::MatrixXcd>(mcdCombined).rank();
-        if(nrank_combined > nrank_pi2) {
-            nloose = -1;
+    if(nrank < nendo) {
+        bool indeterminacy = check_colspace(mcdQH2Pi, mcdQH2Psi);
+        if (indeterminacy) {   
+            return nendo - nrank; // Indeterminacy, return number of loose endogenous variables
         } else {
-            nloose = nendo - nrank_pi2;
+            return -1; // No solution
         }
-        if(nloose<0) nloose = -1;
     } 
-
-    return nloose;
+    return 0; // Unique solution
 }
 
 // Check whether col(B) ⊆ col(A) using SVD of A; returns true if the projection of B onto the left null space of A is ~zero.

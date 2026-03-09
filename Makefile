@@ -8,35 +8,39 @@ OPTIONS = -std=c++23
 DMLOBJECTS = $(DMLPLUS_LOCATION)/utils/utils.o $(DMLPLUS_LOCATION)/gensys/qz.o $(DMLPLUS_LOCATION)/gensys/gensys.o $(DMLPLUS_LOCATION)/numeric/dml_multiroot.o $(DMLPLUS_LOCATION)/numeric/dml_multimin.o
 DMLDEPENDS = utils.o qz.o gensys.o dml_multiroot.o dml_multimin.o
 
-utils.o: utils/utils.h utils/utils.cpp
+utils/utils.o: utils/utils.h utils/utils.cpp
 	$(CPP) $(OPTIONS) $(INCLUDES) -c utils/utils.cpp -o utils/utils.o 
 
-qz.o: gensys/qz.h gensys/qz.cpp
+gensys/qz.o: gensys/qz.h gensys/qz.cpp utils/utils.o
 	$(CPP) $(OPTIONS) $(INCLUDES) -c gensys/qz.cpp -o gensys/qz.o 
 
-gensys.o: gensys/gensys.h gensys/gensys.cpp gensys/qz.o
+gensys/gensys.o: gensys/gensys.h gensys/gensys.cpp gensys/qz.o utils/utils.o
 	$(CPP) $(OPTIONS) $(INCLUDES) -c gensys/gensys.cpp -o gensys/gensys.o
 
-run_eigen.out: gensys/run_eigen.cpp utils/utils.o gensys/qz.o gensys/gensys.o
+gensys/testgensys.out: utils/utils.o gensys/qz.o gensys/gensys.o gensys/testgensys.cpp
+	$(CPP) $(OPTIONS) $(INCLUDES) gensys/testgensys.cpp utils/utils.o gensys/qz.o gensys/gensys.o -o gensys/testgensys.out $(LINKS)
+	chmod a+x gensys/testgensys.out
+
+gensys/run_eigen.out: gensys/run_eigen.cpp utils/utils.o gensys/qz.o gensys/gensys.o
 	$(CPP) $(OPTIONS) $(INCLUDES) gensys/run_eigen.cpp utils/utils.o gensys/qz.o gensys/gensys.o -o gensys/run_eigen.out $(LINKS)
 	chmod a+x gensys/run_eigen.out
 
 setup_gensysR: gensys/gensys.h gensys/gensys.cpp gensys/qz.h gensys/qz.cpp gensys/gensysR.cpp gensys/gensysR.R 
-	rm gensysgensysR/src/gensys.h gensys/gensysR/src/gensys.cpp gensys/gensysR/src/qz.h gensys/gensysR/src/qz.cpp gensys/gensysR/src/gensysR.cpp gensys/gensysR/R/gensysR.R
-	cp gensys/gensys.h gensys/gensys.cpp gensys/qz.h gensys/qz.cpp gensys/gensysR.cpp gensys/gensysR/src/
+	rm -f gensys/gensysR/src/gensys.h gensys/gensysR/src/gensys.cpp gensys/gensysR/src/qz.h gensys/gensysR/src/qz.cpp gensys/gensysR/src/utils.h gensys/gensysR/src/utils.cpp gensys/gensysR/src/gensysR.cpp gensys/gensysR/R/gensysR.R
+	cp gensys/gensys.h gensys/gensys.cpp gensys/qz.h gensys/qz.cpp gensys/gensysR.cpp utils/utils.h utils/utils.cpp gensys/gensysR/src/
 	cp gensys/gensysR.R gensys/gensysR/R/
 
-dml_multiroot.o: numeric/dml_multiroot.h numeric/dml_multiroot.cpp
+numeric/dml_multiroot.o: numeric/dml_multiroot.h numeric/dml_multiroot.cpp
 	$(CPP) $(OPTIONS) $(INCLUDES) -c numeric/dml_multiroot.cpp -o numeric/dml_multiroot.o
 
-dml_multimin.o: numeric/dml_multimin.h numeric/dml_multimin.cpp
+numeric/dml_multimin.o: numeric/dml_multimin.h numeric/dml_multimin.cpp
 	$(CPP) $(OPTIONS) $(INCLUDES) -c numeric/dml_multimin.cpp -o numeric/dml_multimin.o
 
-test_multiroot.out: utils.o dml_multiroot.o numeric/test_multiroot.cpp
+numeric/test_multiroot.out: utils/utils.o numeric/dml_multiroot.o numeric/test_multiroot.cpp
 	$(CPP) $(OPTIONS) $(INCLUDES) numeric/test_multiroot.cpp numeric/dml_multiroot.o utils/utils.o -o numeric/test_multiroot.out $(LINKS)
 	chmod a+x numeric/test_multiroot.out
 
-test_multimin.out: utils.o dml_multimin.o numeric/test_multimin.cpp
+numeric/test_multimin.out: utils/utils.o numeric/dml_multimin.o numeric/test_multimin.cpp
 	$(CPP) $(OPTIONS) $(INCLUDES) numeric/test_multimin.cpp numeric/dml_multimin.o utils/utils.o -o numeric/test_multimin.out $(LINKS)
 	chmod a+x numeric/test_multimin.out
 
@@ -59,5 +63,7 @@ all:
 	$(CPP) $(OPTIONS) $(INCLUDES) -c gensys/qz.cpp -o gensys/qz.o 
 	$(CPP) $(OPTIONS) $(INCLUDES) -c gensys/gensys.cpp -o gensys/gensys.o
 	$(CPP) $(OPTIONS) $(INCLUDES) gensys/run_eigen.cpp utils/utils.o gensys/qz.o -o gensys/run_eigen.out $(LINKS)
+	$(CPP) $(OPTIONS) $(INCLUDES) gensys/testgensys.cpp utils/utils.o gensys/qz.o gensys/gensys.o -o gensys/testgensys.out $(LINKS)
+	chmod a+x gensys/testgensys.out
 	chmod a+x gensys/run_eigen.out
 

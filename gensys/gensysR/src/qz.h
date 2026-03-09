@@ -37,9 +37,45 @@
 #include <Eigen/Dense>
 
 
+/**
+ * @brief Eigenvalue selection function passed to LAPACKE_zgges.
+ *
+ * Returns true (selects) eigenvalues with modulus >= 1 (unstable roots),
+ * causing LAPACK to order them last in the generalized Schur decomposition.
+ *
+ * @param alpha Numerator of the generalized eigenvalue
+ * @param beta  Denominator of the generalized eigenvalue
+ * @return Non-zero if the eigenvalue should be placed in the unstable block
+ */
 extern "C" lapack_logical eigenvalue_threshold_function(const lapack_complex_double* alpha, const lapack_complex_double* beta);
 
+/**
+ * @brief Compute the QZ (generalized Schur) decomposition of the matrix pencil (A, B).
+ *
+ * Wraps LAPACKE_zgges to produce the decomposition \f$ A = Q S Z^H \f$, \f$ B = Q T Z^H \f$,
+ * with eigenvalues ordered so that stable roots (modulus < 1) appear first.
+ *
+ * @param mcdQ      (output) Unitary matrix Q
+ * @param mcdZ      (output) Unitary matrix Z
+ * @param mcdS      (output) Upper quasi-triangular matrix S
+ * @param mcdT      (output) Upper quasi-triangular matrix T
+ * @param vdLambda  (output) Generalized eigenvalue moduli |alpha/beta|
+ * @param mdA       (input)  Real matrix A
+ * @param mdB       (input)  Real matrix B
+ * @return Number of stable eigenvalues (modulus < 1)
+ */
 int qz(Eigen::MatrixXcd& mcdQ, Eigen::MatrixXcd& mcdZ, Eigen::MatrixXcd& mcdS, Eigen::MatrixXcd& mcdT, Eigen::VectorXd& vdLambda,
     const Eigen::MatrixXd& mdA, const Eigen::MatrixXd& mdB);
+
+/**
+ * @brief Check if the column space of B is a subset of the column space of A.
+ *
+ * Uses SVD of A; tests whether projections of B's columns onto the left null space of A are zero.
+ *
+ * @param A Matrix whose column space is the reference
+ * @param B Matrix whose columns are tested
+ * @return true if col(B) ⊆ col(A) within a default tolerance of 1e-10
+ */
+bool check_colspace(const Eigen::MatrixXcd& A, const Eigen::MatrixXcd& B);
 
 #endif

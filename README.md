@@ -46,6 +46,14 @@ This compiles all modules and produces `libdml.a`.
 
 ### Build individual modules
 
+This library includes the following modules:
+
+- **`utils`** — Matrix/vector utilities for converting between Eigen, GSL, and LAPACK data structures, plus file I/O and timing functions
+- **`qz`** — QZ (generalized Schur) decomposition wrapper around LAPACK's `zgges` function
+- **`gensys`** — Linear DSGE model solver implementing the Sims (2002) method
+- **`dml_multiroot`** — Multivariate root finder (wrapper around GSL)
+- **`dml_multimin`** — Multivariate minimizer with optional box constraints (wrapper around GSL)
+
 ```bash
 make utils.o
 make qz.o
@@ -56,9 +64,16 @@ make dml_multimin.o
 
 ### Build and run test programs
 
+Test programs demonstrate the library's capabilities:
+
+- **`testgensys.out`** — Solves a simple 3-equation New Keynesian DSGE model with an IS curve, Phillips curve, and Taylor rule; displays system matrices, solution matrices (G, M, D), and impulse responses
+- **`test_multiroot.out`** — Demonstrates multivariate root finding
+- **`test_multimin.out`** — Demonstrates multivariate minimization
+
 ```bash
 make test_multiroot.out   # numeric/test_multiroot.out
 make test_multimin.out    # numeric/test_multimin.out
+make testgensys.out       # gensys/testgensys.out
 ```
 
 ### Clean build artifacts
@@ -194,6 +209,32 @@ Variables include consumption, labor, bonds, investment, capital, wages, the nom
 #### `gensysR/` — R Package
 
 An R package that wraps the `gensys` solver using **Rcpp**, making `gensys`, `gensys_qzdetails`, and `checksys` callable directly from R. See `gensys/gensysR/` for the package source.
+
+---
+
+#### `testgensys.cpp` — Test Program
+
+A standalone test program that demonstrates the `gensys` solver with a simple 3-equation New Keynesian model.
+
+**Model structure:**
+- **Variables:** Output gap ($y_t$), inflation ($\pi_t$), interest rate ($r_t$), plus AR(1) demand and cost-push shocks
+- **Equations:**
+  1. IS curve: $y_t = E_t[y_{t+1}] - \sigma(r_t - E_t[\pi_{t+1}]) + \varepsilon_{y,t}$
+  2. Phillips curve: $\pi_t = \beta E_t[\pi_{t+1}] + \kappa y_t + \varepsilon_{\pi,t}$
+  3. Taylor rule: $r_t = \rho_r r_{t-1} + (1 - \rho_r)(\phi_\pi \pi_t + \phi_y y_t) + \varepsilon_{r,t}$
+- **Shocks:** Demand shock ($\varepsilon_{y,t}$), cost-push shock ($\varepsilon_{\pi,t}$), monetary shock ($\varepsilon_{r,t}$)
+
+**Output:**
+- System matrices ($\Gamma_0, \Gamma_1, \Psi, \Pi$)
+- Solution matrices ($G, M, D$), where $x_t = D + G x_{t-1} + M z_t$
+- Solution status (unique, indeterminate, or non-existent)
+- Impulse responses for 20 periods showing the dynamic effects of each shock
+
+Build and run:
+```bash
+make testgensys.out
+./gensys/testgensys.out
+```
 
 ---
 
