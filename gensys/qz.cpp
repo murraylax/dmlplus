@@ -80,8 +80,10 @@ extern "C" lapack_logical eigenvalue_threshold_function(const lapack_complex_dou
  * 
  * @return Returns an integer equal to the number of stable eigenvalues (i.e. lambda_i < 1.0)
 */
-int qz(Eigen::MatrixXcd& mcdQ, Eigen::MatrixXcd& mcdZ, Eigen::MatrixXcd& mcdS, Eigen::MatrixXcd& mcdT, Eigen::VectorXd& vdLambda,
+int qz(Eigen::MatrixXcd& mcdQ, Eigen::MatrixXcd& mcdZ, Eigen::MatrixXcd& mcdS, Eigen::MatrixXcd& mcdT, Eigen::VectorXd& vdLambda, Eigen::VectorXcd& vcdalpha, Eigen::VectorXcd& vcdbeta,
     const Eigen::MatrixXd& mdA, const Eigen::MatrixXd& mdB) {
+
+    double tol = 1e-10; // Tolerance for identifying zero eigenvalues, can be adjusted as needed
 
     // Check matrix dimensions
     int n = mdA.rows();
@@ -126,7 +128,20 @@ int qz(Eigen::MatrixXcd& mcdQ, Eigen::MatrixXcd& mcdZ, Eigen::MatrixXcd& mcdS, E
 
     int nstable = 0;
     for(int i=0; i<n; i++) {
-        vdLambda(i) = std::abs( std::complex<double>(beta[i]) / std::complex<double>(alpha[i]) ); 
+        vcdalpha(i) = alpha[i];
+        vcdbeta(i) = beta[i];
+
+        double beta_abs = std::abs(std::complex<double>(beta[i]));
+        double alpha_abs = std::abs(std::complex<double>(alpha[i]));
+        if (alpha_abs < tol & beta_abs < tol) {
+            vdLambda(i) = 0.0; // Treat as zero eigenvalue
+        } else if (alpha_abs < tol) {
+            vdLambda(i) = std::numeric_limits<double>::infinity(); // Infinite eigenvalue
+        } else if (beta_abs < tol) {
+            vdLambda(i) = 0.0; // Zero eigenvalue
+        } else {
+            vdLambda(i) = beta_abs / alpha_abs; // Magnitude of the eigenvalue
+        }
         if(vdLambda(i)<=1.0) nstable++;
     }
 

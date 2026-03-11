@@ -196,9 +196,16 @@ int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::Ve
     Eigen::MatrixXcd mcdPsi = mdPsi.cast<std::complex<double>>();
     Eigen::MatrixXcd mcdPi = mdPi.cast<std::complex<double>>();
     Eigen::VectorXcd vcdC = vdC.cast<std::complex<double>>();
+    Eigen::VectorXcd vcdalpha(nvar);
+    Eigen::VectorXcd vcdbeta(nvar);
 
-    int nstable = qz(mcdQ, mcdZ, mcdS, mcdT, vdLambda, mdGamma0, mdGamma1);
+    int nstable = qz(mcdQ, mcdZ, mcdS, mcdT, vdLambda, vcdalpha, vcdbeta, mdGamma0, mdGamma1);
+    std::cout << "alpha: " << vcdalpha.transpose() << std::endl;
+    std::cout << "beta: " << vcdbeta.transpose() << std::endl;
+    std::cout << "Eigen values (sorted by magnitude): " << vdLambda.transpose() << std::endl;
     nunstable = nvar - nstable;
+    std::cout << "Number of unstable eigenvalues: " << nunstable << std::endl;
+    std::cout << "Number of endogenous expectations: " << nendo << std::endl;
 
     // Partition Q^H by rows: bottom nunstable rows correspond to unstable eigenvalues
     Eigen::MatrixXcd mcdQH   = mcdQ.adjoint();
@@ -220,6 +227,10 @@ int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::Ve
         } else {
             return -1; // No solution
         }
+    }
+    if(nunstable > nendo) {
+        bool exists = check_colspace(mcdQH2Pi, mcdQH2Psi);
+        if (!exists) return -1;
     }
 
     Eigen::MatrixXcd mcdZ1 = mcdZ.block(0, 0, nvar, nstable);
@@ -244,19 +255,19 @@ int gensys_qzdetails(Eigen::MatrixXd& mdGsol, Eigen::MatrixXd& mdMsol, Eigen::Ve
     mdMsol = mcdM.real();
     vdDsol = vcdD.real();
 
-    // // Verification: Γ₀ * M - Ψ should be in the column space of Π
-    // Eigen::MatrixXcd mcdResidual = mcdGamma0 * mcdM - mcdPsi;
-    // Eigen::MatrixXcd mcdResidual_check = mcdResidual - mcdPi * (mcdPi.completeOrthogonalDecomposition().pseudoInverse() * mcdResidual);
-    // double shock_residual = mcdResidual_check.norm();
+    // Verification: Γ₀ * M - Ψ should be in the column space of Π
+    Eigen::MatrixXcd mcdResidual = mcdGamma0 * mcdM - mcdPsi;
+    Eigen::MatrixXcd mcdResidual_check = mcdResidual - mcdPi * (mcdPi.completeOrthogonalDecomposition().pseudoInverse() * mcdResidual);
+    double shock_residual = mcdResidual_check.norm();
 
-    // // Verification: (Γ₀ * G - Γ₁) * Z₁ should be in the column space of Π
-    // Eigen::MatrixXcd mcdResidual_G = (mcdGamma0 * mcdG - mcdGamma1) * mcdZ1;
-    // Eigen::MatrixXcd mcdResidual_G_check = mcdResidual_G - mcdPi * (mcdPi.completeOrthogonalDecomposition().pseudoInverse() * mcdResidual_G);
-    // double G_residual = mcdResidual_G_check.norm();
+    // Verification: (Γ₀ * G - Γ₁) * Z₁ should be in the column space of Π
+    Eigen::MatrixXcd mcdResidual_G = (mcdGamma0 * mcdG - mcdGamma1) * mcdZ1;
+    Eigen::MatrixXcd mcdResidual_G_check = mcdResidual_G - mcdPi * (mcdPi.completeOrthogonalDecomposition().pseudoInverse() * mcdResidual_G);
+    double G_residual = mcdResidual_G_check.norm();
 
-    // std::cout << "Solution verification (should be ~0): " 
-    //         << "M check = " << shock_residual 
-    //         << ", G check = " << G_residual << std::endl;
+    std::cout << "Solution verification (should be ~0): " 
+            << "M check = " << shock_residual 
+            << ", G check = " << G_residual << std::endl;
 
     return 0;
 }
@@ -283,8 +294,10 @@ int checksys(const Eigen::MatrixXd& mdGamma0, const Eigen::MatrixXd& mdGamma1, c
     Eigen::MatrixXcd mcdPsi = mdPsi.cast<std::complex<double>>();
     Eigen::MatrixXcd mcdPi = mdPi.cast<std::complex<double>>();
     Eigen::VectorXcd vcdC = vdC.cast<std::complex<double>>();
+    Eigen::VectorXcd vcdalpha(nvar);
+    Eigen::VectorXcd vcdbeta(nvar);
 
-    int nstable = qz(mcdQ, mcdZ, mcdS, mcdT, vdLambda, mdGamma0, mdGamma1);
+    int nstable = qz(mcdQ, mcdZ, mcdS, mcdT, vdLambda, vcdalpha, vcdbeta, mdGamma0, mdGamma1);
     int nunstable = nvar - nstable;
 
    // Partition Q^H by rows: bottom nunstable rows correspond to unstable eigenvalues

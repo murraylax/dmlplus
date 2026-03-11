@@ -30,6 +30,9 @@ setup_gensysR: gensys/gensys.h gensys/gensys.cpp gensys/qz.h gensys/qz.cpp gensy
 	cp gensys/gensys.h gensys/gensys.cpp gensys/qz.h gensys/qz.cpp gensys/gensysR.cpp utils/utils.h utils/utils.cpp gensys/gensysR/src/
 	cp gensys/gensysR.R gensys/gensysR/R/
 
+gensysR: setup_gensysR
+	cd gensys/gensysR && R CMD INSTALL . --no-multiarch --with-keep.source
+
 numeric/dml_multiroot.o: numeric/dml_multiroot.h numeric/dml_multiroot.cpp
 	$(CPP) $(OPTIONS) $(INCLUDES) -c numeric/dml_multiroot.cpp -o numeric/dml_multiroot.o
 

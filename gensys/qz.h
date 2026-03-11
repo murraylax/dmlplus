@@ -64,7 +64,7 @@ extern "C" lapack_logical eigenvalue_threshold_function(const lapack_complex_dou
  * @param mdB       (input)  Real matrix B
  * @return Number of stable eigenvalues (modulus < 1)
  */
-int qz(Eigen::MatrixXcd& mcdQ, Eigen::MatrixXcd& mcdZ, Eigen::MatrixXcd& mcdS, Eigen::MatrixXcd& mcdT, Eigen::VectorXd& vdLambda,
+int qz(Eigen::MatrixXcd& mcdQ, Eigen::MatrixXcd& mcdZ, Eigen::MatrixXcd& mcdS, Eigen::MatrixXcd& mcdT, Eigen::VectorXd& vdLambda, Eigen::VectorXcd& vcdalpha, Eigen::VectorXcd& vcdbeta,
     const Eigen::MatrixXd& mdA, const Eigen::MatrixXd& mdB);
 
 /**

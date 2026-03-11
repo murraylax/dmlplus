@@ -35,6 +35,8 @@ int main() {
     MatrixXcd mcdQ(n,n);
     MatrixXcd mcdZ(n,n);
     VectorXd vdLambda(n);
+    VectorXcd vcdalpha(n);
+    VectorXcd vcdbeta(n);
 
     mdA << 1, 2, 13, 14, 15, 6, 7, 8, 9;
     mdB << 11, 22, 3, 4, 5, 6, 7, 18, 19;
@@ -45,15 +47,17 @@ int main() {
     cout << sA << endl;
     cout << sB << endl;
 
-    qz(mcdQ, mcdZ, mcdS, mcdT, vdLambda, mdA, mdB);
+    qz(mcdQ, mcdZ, mcdS, mcdT, vdLambda, vcdalpha, vcdbeta, mdA, mdB);
 
     std::string sQ = print_matrix_to_rcode(mcdQ, "Q");
     std::string sZ = print_matrix_to_rcode(mcdZ, "Z");
     std::string sS = print_matrix_to_rcode(mcdS, "S");
     std::string sT = print_matrix_to_rcode(mcdT, "T");
     std::string sLambda = print_vector_to_rcode(vdLambda, "lambda");
+    std::string sAlpha = print_vector_to_rcode(vcdalpha, "alpha");
+    std::string sBeta = print_vector_to_rcode(vcdbeta, "beta");
     
-    cout << sQ << endl << sZ << endl << sS << endl << sT << endl << sLambda << endl;
+    cout << sQ << endl << sZ << endl << sS << endl << sT << endl << sLambda << endl << sAlpha << endl << sBeta << endl;
 
     return 1;
 }
